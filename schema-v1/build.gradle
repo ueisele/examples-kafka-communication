@@ -17,17 +17,20 @@
  * under the License.
  */
 
-dependencies {
-    implementation libs.kafkaStreams_23
-    implementation libs.argparse4j
-    implementation libs.slf4jApi
-   
-    testImplementation libs.kafkaClients_23_test
-    testImplementation libs.junit
+plugins {
+    id 'com.commercehub.gradle.plugin.avro' version '0.17.0'
+}
 
-    testRuntimeOnly libs.slf4jlog4j
+dependencies {
+    implementation libs.avro_19
+
+    testImplementation libs.junit
 }
 
 javadoc {
     enabled = true
+}
+
+avro {
+    fieldVisibility = "PRIVATE"
 }
