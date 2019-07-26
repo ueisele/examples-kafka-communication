@@ -73,6 +73,38 @@ ext {
 
 apply from: file('wrapper.gradle')
 
+task dist(type: Copy) {
+    subprojects.each {
+        duplicatesStrategy 'exclude'
+
+        dependsOn("${it.name}:jar")
+        from (it.tasks.matching { it.name == 'jar' }) {
+            into "libs"
+        }
+        from (it.tasks.matching { it.name == 'copyDependantLibs' }) {
+            into "libs"
+        }
+
+        from ("$projectDir/src/main/bash") {
+            into "bin"
+        }
+
+        from ("$projectDir/src/main/config") {
+            into "config"
+        }
+
+        destinationDir file("$buildDir/dist")
+    }
+}
+
+task distTar(type: Tar, dependsOn: dist) {
+    archiveClassifier = 'dist'
+    compression = Compression.GZIP
+    from tasks.matching { it.name == 'dist' }
+    into "$archivesBaseName()"
+    destinationDir file("$buildDir/distTar")
+}
+
 subprojects {
     
     apply plugin: 'java-library'

@@ -27,3 +27,5 @@ pluginManagement {
 rootProject.name = 'kafka-communication'
 include 'schema-v1'
 include 'producer-v1'
+include 'sequence'
+

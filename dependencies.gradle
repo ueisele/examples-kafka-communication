@@ -30,6 +30,7 @@ versions += [
   activation: "1.1.1",
   argparse4j: "0.8.1",
   log4j: "1.2.17",
+  jackson: "2.9.9",
   junit: "4.13-beta-3",
   slf4j: "1.7.26"
 ]
@@ -44,6 +45,8 @@ libs += [
   avro_19: "org.apache.avro:avro:$versions.avro_19",
   activation: "javax.activation:activation:$versions.activation",
   argparse4j: "net.sourceforge.argparse4j:argparse4j:$versions.argparse4j",
+  jacksonDatabind: "com.fasterxml.jackson.core:jackson-databind:$versions.jackson",
+  jacksonJDK8Datatypes: "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$versions.jackson",
   junit: "junit:junit:$versions.junit", 
   log4j: "log4j:log4j:$versions.log4j",
   slf4jApi: "org.slf4j:slf4j-api:$versions.slf4j",
