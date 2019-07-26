@@ -44,7 +44,7 @@ allprojects {
     apply plugin: 'idea'
 
     group 'net.uweeisele.examples.kafka'
-    version = "0.0.0"
+    version = Git.open(new FileRepositoryBuilder().findGitDir(project.rootDir).getGitDir()).describe().setTags(true).call()
 
     repositories {
         mavenCentral()
