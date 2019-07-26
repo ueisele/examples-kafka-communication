@@ -1,0 +1,23 @@
+= Kafka Communication Example
+
+Example for communication between two apps with special focus on schema evolution.
+
+== Build
+
+You need to have [Gradle](http://www.gradle.org/installation) and [Java](http://www.oracle.com/technetwork/java/javase/downloads/index.html) installed.
+
+The project requires Gradle 5.0 or higher.
+
+Java 11 must be used for building in order to support Java 11 at runtime.
+
+=== First bootstrap and download the wrapper ###
+    cd project_source_dir
+    gradle
+
+Now everything else will work.
+
+=== Build a jar and run it ###
+    ./gradlew jar
+
+== Quickstart
+
