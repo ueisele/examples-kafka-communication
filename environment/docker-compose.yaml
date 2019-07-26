@@ -1,0 +1,50 @@
+---
+version: '3.7'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:${VERSION_CONFLUENT}
+    restart: unless-stopped
+    ports:
+      - 2181:2181
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SERVERS: zookeeper:2888:3888
+    networks:
+      default:
+
+  kafka:
+    image: confluentinc/cp-kafka:${VERSION_CONFLUENT}
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - 9092:9092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:19092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      default:
+
+  init-topics:
+    image: confluentinc/cp-kafka:${VERSION_CONFLUENT}
+    restart: on-failure
+    depends_on:
+      - kafka
+    networks:
+      default:
+    command: >
+      bash -c
+      "kafka-topics --zookeeper zookeeper --topic source --partitions 1 --replication-factor 1 --create &&
+      kafka-topics --zookeeper zookeeper --topic intermediate --partitions 1 --replication-factor 1 --create &&
+      kafka-topics --zookeeper zookeeper --topic output --partitions 1 --replication-factor 1 --create"
+
+networks:
+  default:
+...
