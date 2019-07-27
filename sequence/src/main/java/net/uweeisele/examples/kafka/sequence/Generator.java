@@ -143,6 +143,28 @@ public class Generator implements Runnable, AutoCloseable {
         eventHandler.on(new ProducerStats(numSent, numAcked, throughputThrottler.getTargetThroughput(), getAvgThroughput()));
     }
 
+    private class EventCallback implements Callback {
+
+        private String key;
+        private Long value;
+
+        EventCallback(String key, Long value) {
+            this.key = key;
+            this.value = value;
+        }
+
+        public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+            synchronized (Generator.this.eventHandler) {
+                if (e == null) {
+                    Generator.this.numAcked++;
+                    Generator.this.eventHandler.on(new SuccessfulSend(this.key, this.value, recordMetadata));
+                } else {
+                    Generator.this.eventHandler.on(new FailedSend(this.key, this.value, topic, e));
+                }
+            }
+        }
+    }
+
     public static class Builder {
 
         private final Producer<String, String> producer;
@@ -194,28 +216,6 @@ public class Generator implements Runnable, AutoCloseable {
 
         public Generator build() {
             return new Generator(producer, topic, numKeys, maxMessagesPerKey, throughputThrottler, createTime, eventHandler);
-        }
-    }
-
-    private class EventCallback implements Callback {
-
-        private String key;
-        private Long value;
-
-       EventCallback(String key, Long value) {
-            this.key = key;
-            this.value = value;
-        }
-
-        public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-            synchronized (System.out) {
-                if (e == null) {
-                    Generator.this.numAcked++;
-                    Generator.this.eventHandler.on(new SuccessfulSend(this.key, this.value, recordMetadata));
-                } else {
-                    Generator.this.eventHandler.on(new FailedSend(this.key, this.value, topic, e));
-                }
-            }
         }
     }
 

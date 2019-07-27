@@ -20,8 +20,8 @@ package net.uweeisele.examples.kafka.sequence;
 /**
  * This class helps producers throttle throughput.
  *
- * If targetThroughput >= 0, the resulting average throughput will be approximately
- * min(targetThroughput, maximumPossibleThroughput). If targetThroughput < 0,
+ * If targetThroughput &gt;= 0, the resulting average throughput will be approximately
+ * min(targetThroughput, maximumPossibleThroughput). If targetThroughput &lt; 0,
  * no throttling will occur.
  *
  * To use, do this between successive send attempts:
