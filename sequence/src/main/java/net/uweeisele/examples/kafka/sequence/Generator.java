@@ -13,6 +13,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 
 public class Generator implements Runnable, AutoCloseable {
 
@@ -28,6 +30,8 @@ public class Generator implements Runnable, AutoCloseable {
 
     private Instant createTime;
 
+    private boolean syncProduce;
+
     private final EventHandler eventHandler;
 
     // Hook to trigger producing thread to stop sending messages
@@ -41,13 +45,16 @@ public class Generator implements Runnable, AutoCloseable {
 
     private List<String> keys = new ArrayList<>();
 
-    protected Generator(Producer<String, String> producer, String topic, int numKeys, long maxMessagesPerKey, ThroughputThrottler throughputThrottler, Instant createTime, EventHandler eventHandler) {
+    private final CountDownLatch shutdownLatch = new CountDownLatch(1);
+
+    public Generator(Producer<String, String> producer, String topic, int numKeys, long maxMessagesPerKey, ThroughputThrottler throughputThrottler, Instant createTime, boolean syncProduce, EventHandler eventHandler) {
         this.producer = producer;
         this.topic = topic;
         this.numKeys = numKeys;
         this.maxMessagesPerKey = maxMessagesPerKey;
         this.throughputThrottler = throughputThrottler;
         this.createTime = createTime;
+        this.syncProduce = syncProduce;
         this.eventHandler = eventHandler;
     }
 
@@ -89,6 +96,11 @@ public class Generator implements Runnable, AutoCloseable {
                 }
             }
         }
+
+        producer.close();
+        eventHandler.on(new ProducerStats(numSent, numAcked, throughputThrottler.getTargetThroughput(), getAvgThroughput()));
+        eventHandler.on(new ShutdownComplete());
+        shutdownLatch.countDown();
     }
 
     public void send(String key, Long value) {
@@ -102,17 +114,21 @@ public class Generator implements Runnable, AutoCloseable {
         }
 
         numSent++;
+        Future<RecordMetadata> result = null;
         try {
-            producer.send(record, new EventCallback(key, value));
+            result = producer.send(record, new EventCallback(key, value));
         } catch (Exception e) {
             synchronized (eventHandler) {
                 eventHandler.on(new FailedSend(key, value, topic, e));
             }
         }
-    }
-
-    public void stopProducing() {
-        stopProducing = true;
+        if (syncProduce && result != null) {
+            try {
+                result.get();
+            } catch (Exception e) {
+                // Handled by callback
+            }
+        }
     }
 
     public List<String> getKeys() {
@@ -138,9 +154,21 @@ public class Generator implements Runnable, AutoCloseable {
 
     @Override
     public void close() {
-        producer.close();
-        eventHandler.on(new ShutdownComplete());
-        eventHandler.on(new ProducerStats(numSent, numAcked, throughputThrottler.getTargetThroughput(), getAvgThroughput()));
+        boolean interrupted = false;
+        try {
+            stopProducing = true;
+            while (true) {
+                try {
+                    shutdownLatch.await();
+                    return;
+                } catch (InterruptedException e) {
+                    interrupted = true;
+                }
+            }
+        } finally {
+            if (interrupted)
+                Thread.currentThread().interrupt();
+        }
     }
 
     private class EventCallback implements Callback {
@@ -182,6 +210,8 @@ public class Generator implements Runnable, AutoCloseable {
         // The create time to set in messages
         private Instant createTime;
 
+        private boolean syncProduce = false;
+
         private EventHandler eventHandler = new JsonPrintEventHandler();
 
         public Builder(Producer<String, String> producer, String topic) {
@@ -209,17 +239,22 @@ public class Generator implements Runnable, AutoCloseable {
             return this;
         }
 
+        public Builder withSyncProduce(boolean syncProduce) {
+            this.syncProduce = syncProduce;
+            return this;
+        }
+
         public Builder withEventHandler(EventHandler eventHandler) {
             this.eventHandler = eventHandler;
             return this;
         }
 
         public Generator build() {
-            return new Generator(producer, topic, numKeys, maxMessagesPerKey, throughputThrottler, createTime, eventHandler);
+            return new Generator(producer, topic, numKeys, maxMessagesPerKey, throughputThrottler, createTime, syncProduce, eventHandler);
         }
     }
 
-    private static class KeysGenerated extends ClientEvent {
+    public static class KeysGenerated extends ClientEvent {
 
         private List<String> keys;
 
@@ -238,7 +273,7 @@ public class Generator implements Runnable, AutoCloseable {
         }
     }
 
-    private static class SuccessfulSend extends ClientEvent {
+    public static class SuccessfulSend extends ClientEvent {
 
         private String key;
         private Long value;
@@ -282,7 +317,7 @@ public class Generator implements Runnable, AutoCloseable {
         }
     }
 
-    private static class FailedSend extends ClientEvent {
+    public static class FailedSend extends ClientEvent {
 
         private String topic;
         private String key;
@@ -328,7 +363,7 @@ public class Generator implements Runnable, AutoCloseable {
         }
     }
 
-    private static class ProducerStats extends ClientEvent {
+    public static class ProducerStats extends ClientEvent {
 
         private long sent;
         private long acked;

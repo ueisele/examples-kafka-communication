@@ -29,14 +29,7 @@ public class GeneratorCommand {
 
         try {
             final Generator generator = createFromArgs(parser, args);
-
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                // Trigger main thread to stop producing messages
-                generator.stopProducing();
-
-                // Flush any remaining messages
-                generator.close();
-            }));
+            Runtime.getRuntime().addShutdownHook(new Thread(generator::close));
 
             generator.run();
         } catch (ArgumentParserException e) {
@@ -45,12 +38,13 @@ public class GeneratorCommand {
         }
     }
 
-    public static Generator createFromArgs(ArgumentParser parser, String[] args) throws ArgumentParserException {
+    private static Generator createFromArgs(ArgumentParser parser, String[] args) throws ArgumentParserException {
         Namespace res = parser.parseArgs(args);
 
         String brokerList = res.getString("brokerList");
         String topic = res.getString("topic");
         int acks = res.getInt("acks");
+        boolean sync = res.getBoolean("sync");
         String configFile = res.getString("producer.config");
         int numKeys = res.getInt("numKeys");
         long maxMessagesPerKey = res.getLong("maxMessagesPerKey");
@@ -79,13 +73,14 @@ public class GeneratorCommand {
                 .withMaxMessagesPerKey(maxMessagesPerKey)
                 .withThroughput(new ThroughputThrottler(throughput))
                 .withCreateTime(createTime != null ? Instant.parse(createTime) : null)
+                .withSyncProduce(sync)
                 .build();
     }
 
     /** Get the command-line argument parser. */
     private static ArgumentParser argParser() {
         ArgumentParser parser = ArgumentParsers
-                .newFor("verifiable-producer")
+                .newFor("generator")
                 .addHelp(true)
                 .build()
                 .description("This tool produces increasing integers to the specified topic and prints JSON metadata to stdout on each \"send\" request, making externally visible which messages have been acked and which have not.");
@@ -139,6 +134,14 @@ public class GeneratorCommand {
                 .choices(0, 1, -1)
                 .metavar("ACKS")
                 .help("Acks required on each produced message. See Kafka docs on acks for details.");
+
+        parser.addArgument("--sync")
+                .action(store())
+                .required(false)
+                .setDefault(false)
+                .type(Boolean.class)
+                .metavar("SYNC")
+                .help("Synchronously produce records.");
 
         parser.addArgument("--producer.config")
                 .action(store())
