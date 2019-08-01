@@ -4,7 +4,7 @@
   "type": "record",
   "fields": [
     {
-      "name" : "id",
+      "name" : "eventid",
       "type": {"type": "string", "logicalType": "uuid"}
     },
     {
@@ -12,11 +12,11 @@
       "type": {"type": "long", "logicalType": "timestamp-micros"}
     },
     {
-      "name": "version",
+      "name": "sequenceid",
       "type": "string"
     },
     {
-      "name": "count",
+      "name": "number",
       "type": "long"
     }
   ]
