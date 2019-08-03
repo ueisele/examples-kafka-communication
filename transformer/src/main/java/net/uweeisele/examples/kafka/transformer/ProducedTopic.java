@@ -6,6 +6,7 @@ import org.apache.kafka.streams.processor.StreamPartitioner;
 
 import java.util.Properties;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -38,10 +39,15 @@ public class ProducedTopic<K, V> extends Topic<K, V> {
         return Produced.with(keySerde, valueSerde, partitioner);
     }
 
-    public static class Builder<K, V> implements Function<Properties, ProducedTopic<K, V>> {
+    public static class Builder<K, V> implements Function<Properties, ProducedTopic<K, V>>, Supplier<ProducedTopic<K, V>> {
 
         private Function<Properties, ? extends Topic<K, V>> topicBuilder;
         private Function<Properties, ? extends StreamPartitioner<K, V>> partitionerBuilder = p -> null;
+
+        @Override
+        public ProducedTopic<K, V> get() {
+            return build();
+        }
 
         public ProducedTopic<K, V> build() {
             return build(new Properties());

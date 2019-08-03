@@ -7,11 +7,12 @@ import org.apache.kafka.streams.kstream.KeyValueMapper;
 
 import java.util.Properties;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 import static net.uweeisele.examples.kafka.transformer.KeyValueMapperList.none;
 
-public class TransformerTopologyBuilder<KS, VS, KD, VD> implements Function<Properties, Topology> {
+public class TransformerTopologyBuilder<KS, VS, KD, VD> implements Function<Properties, Topology>, Supplier<Topology> {
 
     private Function<Properties, ConsumedTopic<KS, VS>> sourceTopicBuilder;
 
@@ -45,6 +46,11 @@ public class TransformerTopologyBuilder<KS, VS, KD, VD> implements Function<Prop
         this.sourceTopicBuilder = sourceTopicBuilder;
         this.destinationTopicBuilder = destinationTopicBuilder;
         this.keyValueMapperBuilder = keyValueMapperBuilder;
+    }
+
+    @Override
+    public Topology get() {
+        return build();
     }
 
     public Topology build() {

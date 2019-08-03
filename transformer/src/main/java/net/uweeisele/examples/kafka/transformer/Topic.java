@@ -4,6 +4,7 @@ import org.apache.kafka.common.serialization.Serde;
 
 import java.util.Properties;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -35,11 +36,16 @@ public class Topic<K, V> {
         return valueSerde;
     }
 
-    public static class Builder<K, V> implements Function<Properties, Topic<K, V>> {
+    public static class Builder<K, V> implements Function<Properties, Topic<K, V>>, Supplier<Topic<K, V>> {
 
         private Function<Properties, String> nameBuilder;
         private Function<Properties, ? extends Serde<K>> keySerdeBuilder;
         private Function<Properties, ? extends Serde<V>> valueSerdeBuilder;
+
+        @Override
+        public Topic<K, V> get() {
+            return build();
+        }
 
         public Topic<K, V> build() {
             return build(new Properties());

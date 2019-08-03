@@ -26,7 +26,7 @@ public class KeyValueMapperList<KS, VS, KD, VD> extends ArrayList<KeyValueMapper
     }
 
     public static <K, V> KeyValueMapperList<K, V, K, V> noop() {
-        return new KeyValueMapperList<>(Transformation.noop());
+        return new KeyValueMapperList<>(KeyValue::new);
     }
 
     public static <KS, VS, KD, VD> KeyValueMapperList<KS, VS, KD, VD> empty() {

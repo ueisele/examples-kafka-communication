@@ -21,7 +21,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.KEY_SU
 import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 import static java.util.Objects.requireNonNull;
 
-public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Properties, Serde<T>> {
+public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Properties, Serde<T>>, Supplier<Serde<T>> {
 
     private final Supplier<Serde<T>> serdeSupplier;
 
@@ -47,6 +47,11 @@ public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Prope
 
     public static <T extends SpecificRecord> AvroSerdeBuilder<T> specificAvroSerdeBuilder() {
         return new AvroSerdeBuilder<>(SpecificAvroSerde::new);
+    }
+
+    @Override
+    public Serde<T> get() {
+        return build();
     }
 
     public Serde<T> build() {

@@ -7,6 +7,7 @@ import org.apache.kafka.streams.processor.TimestampExtractor;
 
 import java.util.Properties;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
@@ -45,11 +46,16 @@ public class ConsumedTopic<K, V> extends Topic<K, V> {
         return Consumed.with(keySerde, valueSerde, timestampExtractor, resetPolicy);
     }
 
-    public static class Builder<K, V> implements Function<Properties, ConsumedTopic<K, V>> {
+    public static class Builder<K, V> implements Function<Properties, ConsumedTopic<K, V>>, Supplier<ConsumedTopic<K, V>> {
 
         private Function<Properties, ? extends Topic<K, V>> topicBuilder;
         private Function<Properties, ? extends TimestampExtractor> timestampExtractorBuilder = p -> null;
         private Function<Properties, AutoOffsetReset> resetPolicyBuilder = p -> null;
+
+        @Override
+        public ConsumedTopic<K, V> get() {
+            return build();
+        }
 
         public ConsumedTopic<K, V> build() {
             return build(new Properties());
