@@ -8,14 +8,19 @@ import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
-public class TransformerStreamsBuilder {
+public class TransformerStreamsBuilder implements Function<Properties, KafkaStreams> {
 
     private Function<Properties, Topology> topologyBuilder;
 
-    private Properties properties;
+    private Properties properties = new Properties();
 
     public KafkaStreams build() {
         return build(new Properties());
+    }
+
+    @Override
+    public KafkaStreams apply(Properties properties) {
+        return build(properties);
     }
 
     public KafkaStreams build(Properties properties) {
@@ -39,4 +44,5 @@ public class TransformerStreamsBuilder {
         this.properties = requireNonNull(properties);
         return this;
     }
+
 }

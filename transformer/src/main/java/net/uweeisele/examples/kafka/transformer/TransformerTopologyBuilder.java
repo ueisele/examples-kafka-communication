@@ -13,11 +13,15 @@ import static net.uweeisele.examples.kafka.transformer.KeyValueMapperList.none;
 
 public class TransformerTopologyBuilder<KS, VS, KD, VD> implements Function<Properties, Topology> {
 
-    private final Function<Properties, ConsumedTopic<KS, VS>> sourceTopicBuilder;
+    private Function<Properties, ConsumedTopic<KS, VS>> sourceTopicBuilder;
 
-    private final Function<Properties, ProducedTopic<KD, VD>> destinationTopicBuilder;
+    private Function<Properties, ProducedTopic<KD, VD>> destinationTopicBuilder;
 
     private Function<Properties, ? extends KeyValueMapper<? super KS, ? super VS, ? extends Iterable<? extends KeyValue<? extends KD, ? extends VD>>>> keyValueMapperBuilder;
+
+    public TransformerTopologyBuilder() {
+        this((Function<Properties, ConsumedTopic<KS, VS>>) null, null);
+    }
 
     public TransformerTopologyBuilder(ConsumedTopic<KS, VS> sourceTopic,
                                       ProducedTopic<KD, VD> destinationTopic) {
@@ -58,12 +62,32 @@ public class TransformerTopologyBuilder<KS, VS, KD, VD> implements Function<Prop
                 keyValueMapperBuilder.apply(properties));
     }
 
-    public Topology build(ConsumedTopic<KS, VS> sourceTopic, ProducedTopic<KD, VD> destinationTopic, KeyValueMapper<? super KS, ? super VS, ? extends Iterable<? extends KeyValue<? extends KD, ? extends VD>>> keyValueMapper) {
+    public static <KS, VS, KD, VD> Topology build(ConsumedTopic<KS, VS> sourceTopic, ProducedTopic<KD, VD> destinationTopic, KeyValueMapper<? super KS, ? super VS, ? extends Iterable<? extends KeyValue<? extends KD, ? extends VD>>> keyValueMapper) {
         StreamsBuilder builder = new StreamsBuilder();
         builder.stream(sourceTopic.name(), sourceTopic.consumed())
                 .flatMap(keyValueMapper)
                 .to(destinationTopic.name(), destinationTopic.produced());
         return builder.build();
+    }
+
+    public TransformerTopologyBuilder<KS, VS, KD, VD>  withSourceTopic(ConsumedTopic<KS, VS> sourceTopic) {
+        requireNonNull(sourceTopic);
+        return withSourceTopicBuilder(p -> sourceTopic);
+    }
+
+    public TransformerTopologyBuilder<KS, VS, KD, VD>  withSourceTopicBuilder(Function<Properties, ConsumedTopic<KS, VS>> sourceTopicBuilder) {
+        this.sourceTopicBuilder = requireNonNull(sourceTopicBuilder);
+        return this;
+    }
+
+    public TransformerTopologyBuilder<KS, VS, KD, VD>  withDestinationTopic(ProducedTopic<KD, VD> destinationTopic) {
+        requireNonNull(destinationTopic);
+        return withDestinationTopicBuilder(p -> destinationTopic);
+    }
+
+    public TransformerTopologyBuilder<KS, VS, KD, VD>  withDestinationTopicBuilder(Function<Properties, ProducedTopic<KD, VD>> destinationTopicBuilder) {
+        this.destinationTopicBuilder = requireNonNull(destinationTopicBuilder);
+        return this;
     }
 
     public TransformerTopologyBuilder<KS, VS, KD, VD> withKeyValueMapper(KeyValueMapper<? super KS, ? super VS, ? extends Iterable<? extends KeyValue<? extends KD, ? extends VD>>> keyValueMapper) {
