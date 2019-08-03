@@ -4,12 +4,13 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 
 import java.util.Properties;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
-public class TransformerStreamsBuilder<KS, VS, KD, VD> {
+public class TransformerStreamsBuilder {
 
-    private Topology topology;
+    private Function<Properties, Topology> topologyBuilder;
 
     private Properties properties;
 
@@ -21,15 +22,20 @@ public class TransformerStreamsBuilder<KS, VS, KD, VD> {
         Properties actualProperties = new Properties();
         actualProperties.putAll(this.properties);
         actualProperties.putAll(properties);
-        return new KafkaStreams(topology, actualProperties);
+        return new KafkaStreams(topologyBuilder.apply(actualProperties), actualProperties);
     }
 
-    public TransformerStreamsBuilder<KS, VS, KD, VD> withTopology(Topology topology) {
-        this.topology = requireNonNull(topology);
+    public TransformerStreamsBuilder withTopology(Topology topology) {
+        requireNonNull(topology);
+        return withTopologyBuilder(p -> topology);
+    }
+
+    public TransformerStreamsBuilder withTopologyBuilder(Function<Properties, Topology> topologyBuilder) {
+        this.topologyBuilder = requireNonNull(topologyBuilder);
         return this;
     }
 
-    public TransformerStreamsBuilder<KS, VS, KD, VD> withProperties(Properties properties) {
+    public TransformerStreamsBuilder withProperties(Properties properties) {
         this.properties = requireNonNull(properties);
         return this;
     }

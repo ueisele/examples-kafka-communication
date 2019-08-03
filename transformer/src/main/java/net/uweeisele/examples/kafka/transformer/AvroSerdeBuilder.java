@@ -10,23 +10,24 @@ import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.serialization.Serde;
 
 import java.util.AbstractMap.SimpleEntry;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.KEY_SUBJECT_NAME_STRATEGY;
 import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
+import static java.util.Objects.requireNonNull;
 
-public class AvroSerdeBuilder<T extends IndexedRecord> {
+public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Properties, Serde<T>> {
 
     private final Supplier<Serde<T>> serdeSupplier;
 
-    private Map<String, ?> serdeConfig = new HashMap<>();
+    private Properties serdeConfig = new Properties();
 
-    private boolean isForKey = false;
+    private Function<Properties, Boolean> isForKeyBuilder = p-> false;
 
     private String schemaRegistryUrl;
 
@@ -34,6 +35,10 @@ public class AvroSerdeBuilder<T extends IndexedRecord> {
 
     public AvroSerdeBuilder(Supplier<Serde<T>> serdeSupplier) {
         this.serdeSupplier = serdeSupplier;
+    }
+
+    public static AvroSerdeBuilder<? extends IndexedRecord> avroSerdeBuilder() {
+        return new AvroSerdeBuilder<>(GenericAvroSerde::new);
     }
 
     public static AvroSerdeBuilder<GenericRecord> genericAvroSerdeBuilder() {
@@ -45,40 +50,41 @@ public class AvroSerdeBuilder<T extends IndexedRecord> {
     }
 
     public Serde<T> build() {
-        return build(Map.of());
+        return build(new Properties());
+    }
+
+
+    @Override
+    public Serde<T> apply(Properties properties) {
+        return build(properties);
     }
 
     public Serde<T> build(Properties serdeConfig) {
-        return build(toMap(serdeConfig));
-    }
-
-    public Serde<T> build(Map<String, ?> serdeConfig) {
         Serde<T> serde = serdeSupplier.get();
-        Map<String, Object> actualConfig = new HashMap<>();
-        actualConfig.put(SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
-        actualConfig.put(KEY_SUBJECT_NAME_STRATEGY, subjectNameStrategy.getName());
+        Properties actualConfig = new Properties();
+        actualConfig.setProperty(SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+        actualConfig.setProperty(KEY_SUBJECT_NAME_STRATEGY, subjectNameStrategy.getName());
         actualConfig.putAll(this.serdeConfig);
         actualConfig.putAll(serdeConfig);
-        serde.configure(actualConfig, isForKey);
+        serde.configure(toMap(actualConfig), isForKeyBuilder.apply(actualConfig));
         return serde;
     }
 
     public AvroSerdeBuilder<T> withSerdeConfig(Properties serdeConfig) {
-        return withSerdeConfig(toMap(serdeConfig));
-    }
-
-    public AvroSerdeBuilder<T> withSerdeConfig(Map<String, ?> serdeConfig) {
-        this.serdeConfig = serdeConfig;
+        this.serdeConfig = requireNonNull(serdeConfig);
         return this;
     }
 
     public AvroSerdeBuilder<T> isForKey() {
-        isForKey = true;
-        return this;
+        return withIsForKeyBuilder(p -> true);
     }
 
     public AvroSerdeBuilder<T> isForValue() {
-        isForKey = false;
+        return withIsForKeyBuilder(p -> false);
+    }
+
+    public AvroSerdeBuilder<T> withIsForKeyBuilder(Function<Properties, Boolean> isForKeyBuilder) {
+        this.isForKeyBuilder = requireNonNull(isForKeyBuilder);
         return this;
     }
 
@@ -88,7 +94,7 @@ public class AvroSerdeBuilder<T extends IndexedRecord> {
     }
 
     public AvroSerdeBuilder<T> withSubjectNameStrategy(Class<? extends SubjectNameStrategy> subjectNameStrategy) {
-        this.subjectNameStrategy = subjectNameStrategy;
+        this.subjectNameStrategy = requireNonNull(subjectNameStrategy);
         return this;
     }
 
@@ -97,4 +103,5 @@ public class AvroSerdeBuilder<T extends IndexedRecord> {
                 .map(entry -> new SimpleEntry<>(String.valueOf(entry.getKey()), entry.getValue()))
                 .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
     }
+
 }
