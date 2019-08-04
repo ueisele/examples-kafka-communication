@@ -47,6 +47,10 @@ public class ErrorCode {
         return new ErrorCode(message, code, severity, suppressMessage);
     }
 
+    public ErrorCode withFormattedMessage(Object... args) {
+        return new ErrorCode(String.format(message, args), code, severity, suppressMessage);
+    }
+
     public ErrorCode withCode(ReturnCode code) {
         return new ErrorCode(message, code, severity, suppressMessage);
     }
@@ -59,4 +63,13 @@ public class ErrorCode {
         return new ErrorCode(message, code, severity, suppressMessage);
     }
 
+    @Override
+    public String toString() {
+        return "ErrorCode{" +
+                "message='" + message + '\'' +
+                ", code=" + code +
+                ", severity=" + severity +
+                ", suppressMessage=" + suppressMessage +
+                '}';
+    }
 }

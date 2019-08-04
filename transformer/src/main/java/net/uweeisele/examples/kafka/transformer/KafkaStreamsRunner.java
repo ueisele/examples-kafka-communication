@@ -21,7 +21,7 @@ public class KafkaStreamsRunner implements Callable<Integer>, AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaStreamsRunner.class);
 
-    private static final ErrorCode INTERRUPTED_EXIT = new ErrorCode("Application has been interrupted! Stopping now!", internalCode(254), INFO);
+    private static final ErrorCode INTERRUPTED_EXIT = new ErrorCode("Application has been interrupted! Stopping now!", internalCode(255), INFO);
 
     private final Function<Properties, KafkaStreams> kafkaStreamsBuilder;
     private final Supplier<Properties> propertiesSupplier;

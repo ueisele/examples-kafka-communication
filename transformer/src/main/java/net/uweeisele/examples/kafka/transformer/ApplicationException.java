@@ -4,33 +4,25 @@ import static java.util.Objects.requireNonNull;
 
 public class ApplicationException extends RuntimeException {
 
-    private final ReturnCode.Public code;
-    private final boolean suppressMessage;
+    private final ErrorCode errorCode;
 
-    public ApplicationException(String message, ReturnCode.Public code, boolean suppressMessage) {
-        this(message, null, code, suppressMessage);
+    public ApplicationException(ErrorCode errorCode) {
+        this(errorCode, null);
     }
 
-    public ApplicationException(String message, Throwable cause, ReturnCode.Public code, boolean suppressMessage) {
-        super(message, cause);
-        this.code = requireNonNull(code);
-        this.suppressMessage = suppressMessage;
+    public ApplicationException(ErrorCode errorCode, Throwable cause) {
+        super(errorCode.getMessage(), cause);
+        this.errorCode = requireNonNull(errorCode);
     }
 
-    public ReturnCode.Public getCode() {
-        return code;
-    }
-
-    public boolean isSuppressMessage() {
-        return suppressMessage;
+    public ErrorCode getErrorCode() {
+        return errorCode;
     }
 
     @Override
     public String toString() {
         return getClass().getName() + "{" +
-                "message=\"" + getLocalizedMessage() + "\"" +
-                ", code=" + code.get() +
-                ", suppressMessage=" + suppressMessage +
+                "errorCode=" + errorCode +
                 ", cause=\"" + getCause() + "\"" +
                 '}';
     }
