@@ -1,30 +1,36 @@
 package net.uweeisele.examples.kafka.transformer;
 
+import static java.util.Objects.requireNonNull;
+
 public class ApplicationException extends RuntimeException {
 
-    private final int errorCode;
-    private final boolean logException;
+    private final ReturnCode.Public code;
+    private final boolean suppressMessage;
 
-    public ApplicationException(String message, Throwable cause, int errorCode, boolean logException) {
+    public ApplicationException(String message, ReturnCode.Public code, boolean suppressMessage) {
+        this(message, null, code, suppressMessage);
+    }
+
+    public ApplicationException(String message, Throwable cause, ReturnCode.Public code, boolean suppressMessage) {
         super(message, cause);
-        this.errorCode = errorCode;
-        this.logException = logException;
+        this.code = requireNonNull(code);
+        this.suppressMessage = suppressMessage;
     }
 
-    public int getErrorCode() {
-        return errorCode;
+    public ReturnCode.Public getCode() {
+        return code;
     }
 
-    public boolean isLogException() {
-        return logException;
+    public boolean isSuppressMessage() {
+        return suppressMessage;
     }
 
     @Override
     public String toString() {
         return getClass().getName() + "{" +
                 "message=\"" + getLocalizedMessage() + "\"" +
-                ", errorCode=" + errorCode +
-                ", logException=" + logException +
+                ", code=" + code.get() +
+                ", suppressMessage=" + suppressMessage +
                 ", cause=\"" + getCause() + "\"" +
                 '}';
     }
