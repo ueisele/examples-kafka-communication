@@ -21,6 +21,7 @@ dependencies {
     implementation libs.kafkaStreams_23
     implementation libs.kafkaStreamsAvroSerde_53
     implementation libs.argparse4j
+    implementation libs.commons_lang
 
     testImplementation libs.kafkaClients_23_test
     testImplementation libs.junit

@@ -7,15 +7,15 @@ import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 
-public class MultiPropertiesSupplier implements Supplier<Properties> {
+public class CombinedPropertiesSupplier implements Supplier<Properties> {
 
     private List<Supplier<Properties>> suppliers;
 
-    public MultiPropertiesSupplier() {
+    public CombinedPropertiesSupplier() {
         this(new ArrayList<>());
     }
 
-    public MultiPropertiesSupplier(List<Supplier<Properties>> suppliers) {
+    public CombinedPropertiesSupplier(List<Supplier<Properties>> suppliers) {
         this.suppliers = suppliers;
     }
 
@@ -24,12 +24,12 @@ public class MultiPropertiesSupplier implements Supplier<Properties> {
         return suppliers.stream().map(Supplier::get).collect(Properties::new, Properties::putAll, Properties::putAll);
     }
 
-    public MultiPropertiesSupplier addProperties(Properties properties) {
+    public CombinedPropertiesSupplier addProperties(Properties properties) {
         requireNonNull(properties);
         return addPropertiesSupplier(() -> properties);
     }
 
-    public MultiPropertiesSupplier addPropertiesSupplier(Supplier<Properties> supplier) {
+    public CombinedPropertiesSupplier addPropertiesSupplier(Supplier<Properties> supplier) {
         suppliers.add(requireNonNull(supplier));
         return this;
     }
