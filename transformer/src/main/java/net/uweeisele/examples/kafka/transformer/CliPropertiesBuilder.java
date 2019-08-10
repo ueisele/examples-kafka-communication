@@ -2,6 +2,7 @@ package net.uweeisele.examples.kafka.transformer;
 
 import net.sourceforge.argparse4j.ArgumentParserBuilder;
 import net.sourceforge.argparse4j.ArgumentParsers;
+import net.sourceforge.argparse4j.helper.HelpScreenException;
 import net.sourceforge.argparse4j.inf.*;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -61,10 +62,13 @@ public class CliPropertiesBuilder implements Supplier<Properties> {
         Map<String, Object> attrs = new HashMap<>();
         try {
             parser.parseArgs(args, attrs);
+        } catch (HelpScreenException e) {
+            parser.handleError(e);
+            throw new ArgumentParseApplicationException(e.getMessage(), e);
         } catch (ArgumentParserException e) {
             parser.handleError(e);
             parser.printHelp();
-            throw new IllegalArgumentException(e.getMessage(), e);
+            throw new ArgumentParseApplicationException(e.getMessage(), e);
         }
         Properties properties = new Properties();
         properties.putAll(getOrDefault(KEY_PROPERTIES_FILE, new Properties(), Properties.class, attrs));
@@ -100,7 +104,10 @@ public class CliPropertiesBuilder implements Supplier<Properties> {
 
     public static <T> T getOrDefault(String key, T defaultValue, Class<T> type, Map<String, Object> attrs) {
         Object value = attrs.getOrDefault(key, defaultValue);
-        if (value == null || type.isAssignableFrom(value.getClass())) {
+        if (value == null) {
+            value = defaultValue;
+        }
+        if (type.isAssignableFrom(value.getClass())) {
             return (T) value;
         }
         throw new IllegalArgumentException(format("Value of key %s has type %s, but expected %s.", key, value.getClass(), type));

@@ -73,6 +73,7 @@ ext {
 
 apply from: file('wrapper.gradle')
 
+/*
 task dist(type: Copy) {
     subprojects.each {
         duplicatesStrategy 'exclude'
@@ -104,6 +105,7 @@ task distTar(type: Tar, dependsOn: dist) {
     into "$archivesBaseName()"
     destinationDir file("$buildDir/distTar")
 }
+*/
 
 subprojects {
     
@@ -115,10 +117,6 @@ subprojects {
 
     tasks.withType(JavaCompile) {
         options.encoding = UTF_8
-    }
-
-    dependencies {
-        testCompile libs.junit
     }
 
     task copyDependantLibs(type: Copy) {
@@ -139,6 +137,34 @@ subprojects {
         attributes(
                 'Version': "${version}"
         )
+    }
+
+    task dist(type: Copy, dependsOn: jar) {
+        from (tasks.matching { it.name == 'jar' }) {
+            into "libs"
+        }
+        from (tasks.matching { it.name == 'copyDependantLibs' }) {
+            into "libs"
+        }
+
+        from ("src/main/bash") {
+            into "bin"
+        }
+
+        from ("src/main/resources") {
+            include "log4j.properties"
+            into "config"
+        }
+
+        destinationDir file("$buildDir/dist")
+    }
+
+    task distTar(type: Tar, dependsOn: dist) {
+        archiveClassifier = 'dist'
+        compression = Compression.GZIP
+        from tasks.matching { it.name == 'dist' }
+        into "$archivesBaseName()"
+        destinationDir file("$buildDir/distTar")
     }
 
     task srcJar(type: Jar) {

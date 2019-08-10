@@ -10,11 +10,11 @@ public class DefaultErrorCodeFactory implements Function<Exception, ErrorCode> {
 
     private static final ErrorCode UNEXPECTED_EXCEPTION = new ErrorCode(
             "Unexpected exception occurred which caused abnormal termination of this application!",
-            internalCode(128), ERROR, false);
+            internalCode(254), ERROR, false);
 
     private static final ErrorCode ILLEGAL_ARGUMENT = new ErrorCode(
-            "Given argument is not valid. %s",
-            internalCode(129), WARNING, false);
+            "Given arguments are not valid. %s",
+            internalCode(253), WARNING, false);
 
     @Override
     public ErrorCode apply(Exception e) {

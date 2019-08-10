@@ -47,20 +47,6 @@ should_include_file() {
 
 base_dir=$(dirname $0)/..
 
-# run ./gradlew copyDependantLibs to get all dependant jars in a local dir
-shopt -s nullglob
-for dir in "$base_dir"/sequence/build/dependant-libs*;
-do
-  CLASSPATH="$CLASSPATH:$dir/*"
-done
-
-for file in "$base_dir"/sequence/build/libs/*.jar;
-do
-  if should_include_file "$file"; then
-    CLASSPATH="$CLASSPATH":"$file"
-  fi
-done
-
 # classpath addition for release
 for file in "$base_dir"/libs/*;
 do
