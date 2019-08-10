@@ -37,8 +37,8 @@ public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Prope
         this.serdeSupplier = serdeSupplier;
     }
 
-    public static AvroSerdeBuilder<? extends IndexedRecord> avroSerdeBuilder() {
-        return new AvroSerdeBuilder<>(GenericAvroSerde::new);
+    public static <T extends IndexedRecord> AvroSerdeBuilder<T> avroSerdeBuilder() {
+        return new AvroSerdeBuilder<>(IndexedAvroSerde::new);
     }
 
     public static AvroSerdeBuilder<GenericRecord> genericAvroSerdeBuilder() {
