@@ -1,4 +1,4 @@
-package net.uweeisele.example.kafka.consumer;
+package net.uweeisele.example.kafka.producer;
 
 import net.uweeisele.examples.kafka.transformer.CliPropertiesBuilder;
 import net.uweeisele.examples.kafka.transformer.KafkaStreamsRunner;

@@ -1,4 +1,4 @@
-package net.uweeisele.example.kafka.consumer;
+package net.uweeisele.example.kafka.producer;
 
 import io.confluent.kafka.serializers.subject.TopicRecordNameStrategy;
 import io.confluent.kafka.serializers.subject.strategy.SubjectNameStrategy;
