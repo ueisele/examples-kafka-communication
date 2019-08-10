@@ -1,4 +1,4 @@
-package net.uweeisele.example.kafka.producer;
+package net.uweeisele.example.kafka.consumer;
 
 import net.uweeisele.examples.kafka.avro.v1.CountEvent;
 

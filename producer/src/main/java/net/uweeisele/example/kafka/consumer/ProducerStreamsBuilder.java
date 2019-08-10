@@ -1,4 +1,4 @@
-package net.uweeisele.example.kafka.producer;
+package net.uweeisele.example.kafka.consumer;
 
 import io.confluent.kafka.serializers.subject.TopicRecordNameStrategy;
 import io.confluent.kafka.serializers.subject.strategy.SubjectNameStrategy;
@@ -15,6 +15,7 @@ import java.util.function.Supplier;
 
 import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.KEY_SUBJECT_NAME_STRATEGY;
 import static java.util.Objects.requireNonNull;
+import static net.uweeisele.examples.kafka.transformer.AvroSerdeBuilder.avroSerdeBuilder;
 
 public class ProducerStreamsBuilder implements Function<Properties, KafkaStreams>, Supplier<KafkaStreams> {
 
@@ -74,7 +75,7 @@ public class ProducerStreamsBuilder implements Function<Properties, KafkaStreams
                             .withTopicBuilder(new Topic.Builder<String, IndexedRecord>()
                             .withNameBuilder(new RequiredValueBuilder(KEY_TOPIC_DESTINATION_NAME))
                             .withKeySerde(Serdes.String())
-                            .withValueSerdeBuilder(AvroSerdeBuilder.avroSerdeBuilder()
+                            .withValueSerdeBuilder(avroSerdeBuilder()
                                 .isForValue()
                                 .withSubjectNameStrategy(TopicRecordNameStrategy.class)))
                         ))
