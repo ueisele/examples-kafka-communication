@@ -3,11 +3,14 @@ package net.uweeisele.examples.kafka.transformer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
 
 import java.util.Properties;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -16,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 import static net.uweeisele.examples.kafka.transformer.ErrorCode.Severity.INFO;
 import static net.uweeisele.examples.kafka.transformer.ReturnCode.internalCode;
 import static net.uweeisele.examples.kafka.transformer.ReturnCode.success;
+import static net.uweeisele.examples.kafka.transformer.ShutdownHandler.SIGNAL;
 
 public class KafkaStreamsRunner implements Callable<Integer>, AutoCloseable {
 
@@ -26,14 +30,17 @@ public class KafkaStreamsRunner implements Callable<Integer>, AutoCloseable {
     private final Function<Properties, KafkaStreams> kafkaStreamsBuilder;
     private final Supplier<Properties> propertiesSupplier;
 
-    private final Function<Exception, ErrorCode> errorCodeFactory;
+    private final Function<Throwable, ErrorCode> errorCodeFactory;
 
+    private final BiConsumer<Signal, SignalHandler> signalHandlerRegistry;
     private final Runtime runtime;
     private final Function<Runnable, Thread> shutdownHookThreadFactory;
 
     private final AtomicBoolean hasStarted = new AtomicBoolean(false);
     private final CountDownLatch shutdownLatch = new CountDownLatch(1);
     private final CountDownLatch shutdownCompletedLatch = new CountDownLatch(1);
+
+    private ShutdownHandler shutdownHandler = SIGNAL;
 
     public KafkaStreamsRunner(Function<Properties, KafkaStreams> kafkaStreamsBuilder) {
         this(kafkaStreamsBuilder, Properties::new);
@@ -43,14 +50,20 @@ public class KafkaStreamsRunner implements Callable<Integer>, AutoCloseable {
         this(kafkaStreamsBuilder, propertiesSupplier, new DefaultErrorCodeFactory());
     }
 
-    public KafkaStreamsRunner(Function<Properties, KafkaStreams> kafkaStreamsBuilder, Supplier<Properties> propertiesSupplier, Function<Exception, ErrorCode> errorCodeFactory) {
-        this(kafkaStreamsBuilder, propertiesSupplier, errorCodeFactory, Runtime.getRuntime(), Thread::new);
+    public KafkaStreamsRunner(Function<Properties, KafkaStreams> kafkaStreamsBuilder, Supplier<Properties> propertiesSupplier, Function<Throwable, ErrorCode> errorCodeFactory) {
+        this(kafkaStreamsBuilder, propertiesSupplier, errorCodeFactory, Signal::handle, Runtime.getRuntime(), Thread::new);
     }
 
-    public KafkaStreamsRunner(Function<Properties, KafkaStreams> kafkaStreamsBuilder, Supplier<Properties> propertiesSupplier, Function<Exception, ErrorCode> errorCodeFactory, Runtime runtime, Function<Runnable, Thread> shutdownHookThreadFactory) {
+    public KafkaStreamsRunner(Function<Properties, KafkaStreams> kafkaStreamsBuilder,
+                              Supplier<Properties> propertiesSupplier,
+                              Function<Throwable, ErrorCode> errorCodeFactory,
+                              BiConsumer<Signal, SignalHandler> signalHandlerRegistry,
+                              Runtime runtime,
+                              Function<Runnable, Thread> shutdownHookThreadFactory) {
         this.kafkaStreamsBuilder = requireNonNull(kafkaStreamsBuilder);
         this.propertiesSupplier = requireNonNull(propertiesSupplier);
         this.errorCodeFactory = requireNonNull(errorCodeFactory);
+        this.signalHandlerRegistry = requireNonNull(signalHandlerRegistry);
         this.runtime = requireNonNull(runtime);
         this.shutdownHookThreadFactory = requireNonNull(shutdownHookThreadFactory);
     }
@@ -59,23 +72,23 @@ public class KafkaStreamsRunner implements Callable<Integer>, AutoCloseable {
     public Integer call() throws IllegalStateException {
         assertOnlyCalledOnce();
 
-        registerShutdownHook();
+        registerShutdownHandling();
 
-        ReturnCode returnCode;
+        AtomicReference<ReturnCode> returnCode = new AtomicReference<>(success());
         try(KafkaStreams kafkaStreams = kafkaStreamsBuilder.apply(propertiesSupplier.get())) {
+            closeOnUncaughtException(kafkaStreams, returnCode);
             kafkaStreams.start();
             try {
                 shutdownLatch.await();
-                returnCode = success();
             } catch (InterruptedException interruptedException) {
-                returnCode = handleInterruptedException(interruptedException);
+                returnCode.set(handleInterruptedException(interruptedException));
             }
         } catch (Exception exception) {
-            returnCode = handleException(exception);
+            returnCode.set(handleException(exception));
         } finally {
             shutdownCompletedLatch.countDown();
         }
-        return returnCode.get();
+        return returnCode.get().get();
     }
 
     @Override
@@ -98,10 +111,48 @@ public class KafkaStreamsRunner implements Callable<Integer>, AutoCloseable {
         }
     }
 
+    /**
+     * Default shutdown handling is done via signal handler.
+     * This signal handler the signals INT and TERM lead to a successful termination with exit code 0.
+     * However, using signal handler also means, that no other shutdown hooks are executed.
+     * Hook handling leads to a unsuccessful termination with exit code non 0.
+     *
+     * @param shutdownHandler the handling to use
+     * @return this {@link KafkaStreamsRunner}
+     */
+    public KafkaStreamsRunner withShutdownHandler(ShutdownHandler shutdownHandler) {
+        this.shutdownHandler = requireNonNull(shutdownHandler);
+        return this;
+    }
+
     private void assertOnlyCalledOnce() throws IllegalStateException {
         if (hasStarted.compareAndExchange(false, true)) {
             throw new IllegalStateException("Application has already be executed!");
         }
+    }
+
+    private void registerShutdownHandling() {
+        switch (shutdownHandler) {
+            case SIGNAL:
+                registerShutdownSignalHandler();
+                break;
+            case HOOK:
+                registerShutdownHook();
+                break;
+            case NONE:
+                break;
+        }
+    }
+
+    private void registerShutdownSignalHandler() {
+        // Signal handler enable a graceful shutdown of the application.
+        // The application is not terminated (like it is when just using shutdown hooks), but rather normally closed.
+        SignalHandler signalHandler = sig -> {
+            LOG.info(String.format("Closing application because of %s signal.", sig.getName()));
+            shutdownHookThreadFactory.apply(KafkaStreamsRunner.this::close).start();
+        };
+        signalHandlerRegistry.accept(new Signal("TERM"), signalHandler);
+        signalHandlerRegistry.accept(new Signal("INT"), signalHandler);
     }
 
     private void registerShutdownHook() {
@@ -114,23 +165,30 @@ public class KafkaStreamsRunner implements Callable<Integer>, AutoCloseable {
         }
     }
 
+    private void closeOnUncaughtException(KafkaStreams kafkaStreams, AtomicReference<ReturnCode> returnCode) {
+        kafkaStreams.setUncaughtExceptionHandler((t, e) -> {
+            returnCode.set(handleException(e));
+            shutdownHookThreadFactory.apply(this::close).start();
+        });
+    }
+
     private ReturnCode handleInterruptedException(InterruptedException e) {
         Thread.currentThread().interrupt();
         log(INTERRUPTED_EXIT, e);
         return INTERRUPTED_EXIT.getCode();
     }
 
-    private ReturnCode handleException(Exception e) {
+    private ReturnCode handleException(Throwable e) {
         ErrorCode errorCode = errorCodeFactory.apply(e);
         log(errorCode, e);
         return errorCode.getCode();
     }
 
-    private void log(ErrorCode code, Exception e) {
+    private void log(ErrorCode code, Throwable e) {
         logger(code).accept(code.getMessage(), e);
     }
 
-    private BiConsumer<String, Exception> logger(ErrorCode code) {
+    private BiConsumer<String, Throwable> logger(ErrorCode code) {
         switch (code.getSeverity()) {
             case INFO:
                 return logger(code, (msg, e) -> LOG.info(msg), LOG::info);
@@ -141,7 +199,7 @@ public class KafkaStreamsRunner implements Callable<Integer>, AutoCloseable {
         }
     }
 
-    private BiConsumer<String, Exception> logger(ErrorCode code, BiConsumer<String, Exception> logAction, BiConsumer<String, Exception> debugAction) {
+    private BiConsumer<String, Throwable> logger(ErrorCode code, BiConsumer<String, Throwable> logAction, BiConsumer<String, Throwable> debugAction) {
         return (msg, e) -> {
             if (!LOG.isDebugEnabled() && !code.isSuppressMessage()) {
                 logAction.accept(msg, e);

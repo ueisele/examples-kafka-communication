@@ -6,7 +6,7 @@ import static net.uweeisele.examples.kafka.transformer.ErrorCode.Severity.ERROR;
 import static net.uweeisele.examples.kafka.transformer.ErrorCode.Severity.WARNING;
 import static net.uweeisele.examples.kafka.transformer.ReturnCode.internalCode;
 
-public class DefaultErrorCodeFactory implements Function<Exception, ErrorCode> {
+public class DefaultErrorCodeFactory implements Function<Throwable, ErrorCode> {
 
     private static final ErrorCode UNEXPECTED_EXCEPTION = new ErrorCode(
             "Unexpected exception occurred which caused abnormal termination of this application!",
@@ -17,7 +17,7 @@ public class DefaultErrorCodeFactory implements Function<Exception, ErrorCode> {
             internalCode(253), WARNING, false);
 
     @Override
-    public ErrorCode apply(Exception e) {
+    public ErrorCode apply(Throwable e) {
         if (e instanceof ApplicationException) {
             return ((ApplicationException) e).getErrorCode();
         }

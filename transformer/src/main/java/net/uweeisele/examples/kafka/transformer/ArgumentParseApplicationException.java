@@ -7,7 +7,7 @@ public class ArgumentParseApplicationException extends ApplicationException {
 
     private static final ErrorCode ERROR_CODE = new ErrorCode(
             "Could not parse a given argument. %s",
-            internalCode(128), INFO, true);
+            internalCode(200), INFO, true);
 
     public ArgumentParseApplicationException(Throwable cause) {
         this("", cause);
