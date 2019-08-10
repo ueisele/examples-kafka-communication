@@ -1,6 +1,5 @@
 package net.uweeisele.examples.kafka.transformer;
 
-import io.confluent.kafka.serializers.subject.TopicNameStrategy;
 import io.confluent.kafka.serializers.subject.strategy.SubjectNameStrategy;
 import io.confluent.kafka.streams.serdes.avro.GenericAvroSerde;
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
@@ -17,24 +16,26 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.KEY_SUBJECT_NAME_STRATEGY;
-import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
+import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.*;
 import static java.util.Objects.requireNonNull;
 
 public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Properties, Serde<T>>, Supplier<Serde<T>> {
 
     private final Supplier<Serde<T>> serdeSupplier;
 
-    private Properties serdeConfig = new Properties();
+    private final Properties internalProperties;
+
+    private Supplier<Properties> propertiesSupplier = Properties::new;
 
     private Function<Properties, Boolean> isForKeyBuilder = p-> false;
 
-    private String schemaRegistryUrl;
-
-    private Class<? extends SubjectNameStrategy> subjectNameStrategy = TopicNameStrategy.class;
-
     public AvroSerdeBuilder(Supplier<Serde<T>> serdeSupplier) {
+            this(serdeSupplier, new Properties());
+    }
+
+    AvroSerdeBuilder(Supplier<Serde<T>> serdeSupplier, Properties internalProperties) {
         this.serdeSupplier = serdeSupplier;
+        this.internalProperties = internalProperties;
     }
 
     public static <T extends IndexedRecord> AvroSerdeBuilder<T> avroSerdeBuilder() {
@@ -64,21 +65,23 @@ public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Prope
         return build(properties);
     }
 
-    public Serde<T> build(Properties serdeConfig) {
-        Serde<T> serde = serdeSupplier.get();
+    public Serde<T> build(Properties properties) {
         Properties actualConfig = new Properties();
-        if(schemaRegistryUrl != null) {
-            actualConfig.setProperty(SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
-        }
-        actualConfig.setProperty(KEY_SUBJECT_NAME_STRATEGY, subjectNameStrategy.getName());
-        actualConfig.putAll(this.serdeConfig);
-        actualConfig.putAll(serdeConfig);
+        actualConfig.putAll(internalProperties);
+        actualConfig.putAll(propertiesSupplier.get());
+        actualConfig.putAll(properties);
+        Serde<T> serde = serdeSupplier.get();
         serde.configure(toMap(actualConfig), isForKeyBuilder.apply(actualConfig));
         return serde;
     }
 
-    public AvroSerdeBuilder<T> withSerdeConfig(Properties serdeConfig) {
-        this.serdeConfig = requireNonNull(serdeConfig);
+    public AvroSerdeBuilder<T> withProperties(Properties properties) {
+        requireNonNull(properties);
+        return withPropertiesSupplier(() -> properties);
+    }
+
+    public AvroSerdeBuilder<T> withPropertiesSupplier(Supplier<Properties> propertiesSupplier) {
+        this.propertiesSupplier = requireNonNull(propertiesSupplier);
         return this;
     }
 
@@ -96,12 +99,13 @@ public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Prope
     }
 
     public AvroSerdeBuilder<T>  withSchemaRegistryUrl(String schemaRegistryUrl) {
-        this.schemaRegistryUrl = schemaRegistryUrl;
+        internalProperties.setProperty(SCHEMA_REGISTRY_URL_CONFIG, requireNonNull(schemaRegistryUrl));
         return this;
     }
 
     public AvroSerdeBuilder<T> withSubjectNameStrategy(Class<? extends SubjectNameStrategy> subjectNameStrategy) {
-        this.subjectNameStrategy = requireNonNull(subjectNameStrategy);
+        internalProperties.setProperty(KEY_SUBJECT_NAME_STRATEGY, requireNonNull(subjectNameStrategy).getName());
+        internalProperties.setProperty(VALUE_SUBJECT_NAME_STRATEGY, requireNonNull(subjectNameStrategy).getName());
         return this;
     }
 
