@@ -22,12 +22,14 @@ dependencies {
     implementation project(":transformer")
     implementation project(":schema-v1")
 
-    implementation libs.kafkaStreams_23
+    implementation libs.kafkaStreams_53
     implementation libs.kafkaStreamsAvroSerde_53
+    implementation libs.avro_19
+
     implementation libs.argparse4j
     implementation libs.slf4jApi
 
-    testImplementation libs.kafkaClients_23_test
+    testImplementation libs.kafkaClients_53_test
     testImplementation libs.junit
 
     testRuntimeOnly libs.slf4jlog4j

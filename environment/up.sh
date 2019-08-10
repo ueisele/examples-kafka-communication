@@ -7,6 +7,7 @@ popd > /dev/null
 
 function main () {
     start_service "kafka"
+    start_service "schema-registry"
     start_once "init-topics"
 }
 

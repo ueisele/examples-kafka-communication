@@ -67,7 +67,9 @@ public class AvroSerdeBuilder<T extends IndexedRecord> implements Function<Prope
     public Serde<T> build(Properties serdeConfig) {
         Serde<T> serde = serdeSupplier.get();
         Properties actualConfig = new Properties();
-        actualConfig.setProperty(SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+        if(schemaRegistryUrl != null) {
+            actualConfig.setProperty(SCHEMA_REGISTRY_URL_CONFIG, schemaRegistryUrl);
+        }
         actualConfig.setProperty(KEY_SUBJECT_NAME_STRATEGY, subjectNameStrategy.getName());
         actualConfig.putAll(this.serdeConfig);
         actualConfig.putAll(serdeConfig);

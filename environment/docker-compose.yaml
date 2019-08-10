@@ -32,6 +32,18 @@ services:
     networks:
       default:
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:${VERSION_CONFLUENT}
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:19092'
+      SCHEMA_REGISTRY_AVRO_COMPATIBILITY_LEVEL: full_transitive
+
   init-topics:
     image: confluentinc/cp-kafka:${VERSION_CONFLUENT}
     restart: on-failure
