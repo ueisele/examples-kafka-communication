@@ -1,0 +1,10 @@
+dependencies {
+    implementation libs.kafkaAvroSerializer_53
+    implementation libs.avro_19
+
+    testImplementation libs.junit
+}
+
+javadoc {
+    enabled = true
+}

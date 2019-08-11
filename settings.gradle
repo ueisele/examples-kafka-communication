@@ -31,3 +31,5 @@ include 'schema-v1'
 include 'schema-v2'
 include 'producer'
 include 'consumer'
+include 'avro-serializer'
+
