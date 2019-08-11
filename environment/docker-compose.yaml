@@ -57,6 +57,44 @@ services:
       kafka-topics --zookeeper zookeeper --topic intermediate --partitions 1 --replication-factor 1 --create &&
       kafka-topics --zookeeper zookeeper --topic output --partitions 1 --replication-factor 1 --create"
 
+  app-verified-generator:
+    image: adoptopenjdk/openjdk11
+    restart: "no"
+    depends_on:
+      - kafka
+    networks:
+      default:
+    working_dir: /app
+    volumes:
+      - "../sequence/build/dist:/app"
+    command: bin/sequence-verified-generator.sh --broker-list kafka:19092 --max-messages-per-key ${MESSAGES_PER_KEY:-10} --num-keys ${NUM_KEYS:-2} --topic-produce source --acks -1 --topic-consume output --group-id verifier --reset-policy earliest
+
+  app-producer:
+    image: adoptopenjdk/openjdk11
+    restart: "no"
+    depends_on:
+      - kafka
+      - schema-registry
+    networks:
+      default:
+    working_dir: /app
+    volumes:
+      - "../producer/build/dist:/app"
+    command: bin/producer.sh --property application.id=producer --property bootstrap.servers=kafka:19092 --property schema.registry.url=http://schema-registry:8081 --property acks=-1 --property auto.offset.reset=earliest --property topic.source.name=source --property topic.destination.name=intermediate
+
+  app-consumer:
+    image: adoptopenjdk/openjdk11
+    restart: "no"
+    depends_on:
+      - kafka
+      - schema-registry
+    networks:
+      default:
+    working_dir: /app
+    volumes:
+      - "../consumer/build/dist:/app"
+    command: bin/consumer.sh --property application.id=consumer --property bootstrap.servers=kafka:19092 --property schema.registry.url=http://schema-registry:8081 --property acks=-1 --property auto.offset.reset=earliest --property topic.source.name=intermediate --property topic.destination.name=output
+
 networks:
   default:
 ...

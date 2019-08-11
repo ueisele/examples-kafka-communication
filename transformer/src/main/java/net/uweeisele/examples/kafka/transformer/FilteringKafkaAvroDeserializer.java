@@ -48,6 +48,7 @@ public class FilteringKafkaAvroDeserializer extends KafkaAvroDeserializer {
                 return super.deserialize(includeSchemaAndVersion, topic, isKey, payload, readerSchema);
             }
         }
+        return null;
     }
 
     private ByteBuffer getAvroByteBuffer(byte[] payload) {

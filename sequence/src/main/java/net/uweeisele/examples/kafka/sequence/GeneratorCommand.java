@@ -3,19 +3,20 @@ package net.uweeisele.examples.kafka.sequence;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.inf.MutuallyExclusiveGroup;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.common.utils.Exit;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 
+import static java.util.Optional.ofNullable;
+import static net.sourceforge.argparse4j.impl.Arguments.append;
 import static net.sourceforge.argparse4j.impl.Arguments.store;
 
 public class GeneratorCommand {
@@ -45,8 +46,8 @@ public class GeneratorCommand {
         String topic = res.getString("topic");
         int acks = res.getInt("acks");
         boolean sync = res.getBoolean("sync");
-        String configFile = res.getString("producer.config");
-        int numKeys = res.getInt("numKeys");
+        Integer numKeys = res.getInt("numKeys");
+        List<String> keys = res.getList("keys");
         long maxMessagesPerKey = res.getLong("maxMessagesPerKey");
         int throughput = res.getInt("throughput");
         String createTime = res.getString("createTime");
@@ -55,26 +56,23 @@ public class GeneratorCommand {
             createTime = null;
         }
 
-        Properties producerProps = new Properties();
-        producerProps.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
-        producerProps.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        producerProps.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-        producerProps.setProperty(ProducerConfig.ACKS_CONFIG, String.valueOf(acks));
-        if (configFile != null) {
-            try {
-                producerProps.putAll(loadProps(configFile));
-            } catch (IOException e) {
-                throw new ArgumentParserException(e.getMessage(), parser);
-            }
-        }
+        Properties actualProducerProperties = new Properties();
+        Optional.<Properties>ofNullable(res.get("producer.config")).ifPresent(actualProducerProperties::putAll);
 
-        return new Generator.Builder(new KafkaProducer<>(producerProps), topic)
-                .withNumKeys(numKeys)
+        actualProducerProperties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
+        actualProducerProperties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        actualProducerProperties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+        actualProducerProperties.setProperty(ProducerConfig.ACKS_CONFIG, String.valueOf(acks));
+
+        Generator.Builder builder = new Generator.Builder(new KafkaProducer<>(actualProducerProperties), topic)
                 .withMaxMessagesPerKey(maxMessagesPerKey)
                 .withThroughput(new ThroughputThrottler(throughput))
                 .withCreateTime(createTime != null ? Instant.parse(createTime) : null)
-                .withSyncProduce(sync)
-                .build();
+                .withSyncProduce(sync);
+        ofNullable(numKeys).ifPresent(builder::withNumKeys);
+        ofNullable(keys).ifPresent(builder::withKeys);
+
+        return builder.build();
     }
 
     /** Get the command-line argument parser. */
@@ -100,14 +98,23 @@ public class GeneratorCommand {
                 .dest("brokerList")
                 .help("Comma-separated list of Kafka brokers in the form HOST1:PORT1,HOST2:PORT2,...");
 
-        parser.addArgument("--num-keys")
+        MutuallyExclusiveGroup keyGroup = parser.addMutuallyExclusiveGroup()
+                .required(false)
+                .description("Keys can be specified explicitly or by specifying the number of keys. Only one type of this options may be used.");
+        keyGroup.addArgument("--num-keys")
                 .action(store())
                 .required(false)
-                .setDefault(1)
                 .type(Integer.class)
                 .metavar("NUM-KEYS")
                 .dest("numKeys")
                 .help("Produce messages for this many keys. If 0 or less, null is used as key.");
+        keyGroup.addArgument("--key")
+                .action(append())
+                .required(false)
+                .type(String.class)
+                .metavar("KEY")
+                .dest("keys")
+                .help("Key which should be used for generated sequence. Argument can be specified multiple times.");
 
         parser.addArgument("--max-messages-per-key")
                 .action(store())
@@ -148,7 +155,7 @@ public class GeneratorCommand {
                 .required(false)
                 .type(String.class)
                 .metavar("CONFIG_FILE")
-                .help("Producer config properties file.");
+                .help("Producer config properties file (config options shared with command line parameters will be overridden).");
 
         parser.addArgument("--message-create-time")
                 .action(store())
@@ -162,20 +169,4 @@ public class GeneratorCommand {
         return parser;
     }
 
-    /**
-     * Read a properties file from the given path
-     * @param filename The path of the file to read
-     *
-     * Note: this duplication of org.apache.kafka.common.utils.Utils.loadProps is unfortunate
-     * but *intentional*. In order to use VerifiableProducer in compatibility and upgrade tests,
-     * we use VerifiableProducer from the development tools package, and run it against 0.8.X.X kafka jars.
-     * Since this method is not in Utils in the 0.8.X.X jars, we have to cheat a bit and duplicate.
-     */
-    public static Properties loadProps(String filename) throws IOException {
-        Properties props = new Properties();
-        try (InputStream propStream = Files.newInputStream(Paths.get(filename))) {
-            props.load(propStream);
-        }
-        return props;
-    }
 }

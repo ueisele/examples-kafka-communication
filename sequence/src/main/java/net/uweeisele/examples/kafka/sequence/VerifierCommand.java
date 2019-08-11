@@ -3,6 +3,7 @@ package net.uweeisele.examples.kafka.sequence;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
+import net.sourceforge.argparse4j.inf.MutuallyExclusiveGroup;
 import net.sourceforge.argparse4j.inf.Namespace;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -10,19 +11,19 @@ import org.apache.kafka.clients.consumer.RangeAssignor;
 import org.apache.kafka.clients.consumer.RoundRobinAssignor;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.utils.Exit;
-import org.apache.kafka.common.utils.Utils;
 
-import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Supplier;
 
-import static java.util.Arrays.asList;
+import static java.lang.String.format;
+import static java.util.UUID.randomUUID;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static net.sourceforge.argparse4j.impl.Arguments.store;
-import static net.sourceforge.argparse4j.impl.Arguments.storeTrue;
+import static net.sourceforge.argparse4j.impl.Arguments.*;
 
 public class VerifierCommand {
 
@@ -45,6 +46,50 @@ public class VerifierCommand {
         }
     }
 
+    private static Verifier createFromArgs(ArgumentParser parser, String[] args) throws ArgumentParserException {
+        Namespace res = parser.parseArgs(args);
+
+        String topic = res.getString("topic");
+        boolean useAutoCommit = res.getBoolean("useAutoCommit");
+
+        Properties actualConsumerProperties = new Properties();
+        Optional.<Properties>ofNullable(res.get("consumer.config")).ifPresent(actualConsumerProperties::putAll);
+
+        String groupId = res.getString("groupId");
+        actualConsumerProperties.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+
+        String groupInstanceId = res.getString("groupInstanceId");
+        if (groupInstanceId != null) {
+            actualConsumerProperties.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, groupInstanceId);
+        }
+        actualConsumerProperties.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, res.getString("brokerList"));
+        actualConsumerProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, useAutoCommit);
+        actualConsumerProperties.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, res.getString("resetPolicy"));
+        actualConsumerProperties.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, Integer.toString(res.getInt("sessionTimeout")));
+        actualConsumerProperties.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, res.getString("assignmentStrategy"));
+
+        StringDeserializer deserializer = new StringDeserializer();
+        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(actualConsumerProperties, deserializer, deserializer);
+
+        Supplier<Verifier.ValueFilter> keyFilterSupplier;
+        List<String> keys = res.getList("keys");
+        if (keys != null) {
+           keyFilterSupplier = () -> new Verifier.FixedValueFilter(new HashSet<>(keys));
+        } else {
+            keyFilterSupplier = () -> new Verifier.DistinctMaxAcceptedValueFilter(res.getLong("maxKeys"));
+        }
+
+        final long sequenceNumbers = res.getLong("sequenceNumbers") >= 0 ? res.getLong("sequenceNumbers") : Long.MAX_VALUE;
+
+        return new Verifier.Builder(consumer, topic)
+                .withClientName(groupId)
+                .withAsyncCommit(false)
+                .withAutoCommit(useAutoCommit)
+                .withKeyFilterSupplier(keyFilterSupplier)
+                .withValueFilterSupplier(() -> new Verifier.SequenceValueFilter(sequenceNumbers))
+                .build();
+    }
+
     private static ThreadFactory daemonThreadFactory() {
         return r -> {
             Thread t = Executors.defaultThreadFactory().newThread(r);
@@ -53,58 +98,9 @@ public class VerifierCommand {
         };
     }
 
-    private static Verifier createFromArgs(ArgumentParser parser, String[] args) throws ArgumentParserException {
-        Namespace res = parser.parseArgs(args);
-
-        String topic = res.getString("topic");
-        boolean useAutoCommit = res.getBoolean("useAutoCommit");
-        String configFile = res.getString("consumer.config");
-
-        Properties consumerProps = new Properties();
-        if (configFile != null) {
-            try {
-                consumerProps.putAll(Utils.loadProps(configFile));
-            } catch (IOException e) {
-                throw new ArgumentParserException(e.getMessage(), parser);
-            }
-        }
-
-        final long sequenceNumbers = res.getLong("sequenceNumbers") >= 0 ? res.getLong("sequenceNumbers") : Long.MAX_VALUE;
-
-        consumerProps.put(ConsumerConfig.GROUP_ID_CONFIG, res.getString("groupId"));
-
-        String groupInstanceId = res.getString("groupInstanceId");
-        if (groupInstanceId != null) {
-            consumerProps.put(ConsumerConfig.GROUP_INSTANCE_ID_CONFIG, groupInstanceId);
-        }
-        consumerProps.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, res.getString("brokerList"));
-        consumerProps.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, useAutoCommit);
-        consumerProps.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, res.getString("resetPolicy"));
-        consumerProps.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, Integer.toString(res.getInt("sessionTimeout")));
-        consumerProps.put(ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG, res.getString("assignmentStrategy"));
-
-        StringDeserializer deserializer = new StringDeserializer();
-        KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps, deserializer, deserializer);
-
-        Supplier<Verifier.ValueFilter> keyFilterSupplier;
-        String keys = res.getString("keys");
-        if (keys != null) {
-           keyFilterSupplier = () -> new Verifier.FixedValueFilter(new HashSet<>(asList(keys.split(","))));
-        } else {
-            keyFilterSupplier = () -> new Verifier.DistinctMaxAcceptedValueFilter(res.getLong("maxKeys"));
-        }
-
-        return new Verifier.Builder(consumer, topic)
-                .withAsyncCommit(false)
-                .withAutoCommit(useAutoCommit)
-                .withKeyFilterSupplier(keyFilterSupplier)
-                .withValueFilterSupplier(() -> new Verifier.SequenceValueFilter(sequenceNumbers))
-                .build();
-    }
-
     private static long timeoutMsFromArgs(ArgumentParser parser, String[] args) throws ArgumentParserException {
         Namespace res = parser.parseArgs(args);
-        return res.getInt("maxDuration");
+        return res.getInt("maxDuration") >= 0 ? res.getInt("maxDuration") : Long.MAX_VALUE;
 
     }
 
@@ -132,7 +128,8 @@ public class VerifierCommand {
 
         parser.addArgument("--group-id")
                 .action(store())
-                .required(true)
+                .required(false)
+                .setDefault(format("verifier-%s", randomUUID()))
                 .type(String.class)
                 .metavar("GROUP_ID")
                 .dest("groupId")
@@ -147,15 +144,10 @@ public class VerifierCommand {
                 .dest("groupInstanceId")
                 .help("A unique identifier of the consumer instance");
 
-        parser.addArgument("--keys")
-                .action(store())
+        MutuallyExclusiveGroup keyGroup = parser.addMutuallyExclusiveGroup()
                 .required(false)
-                .type(String.class)
-                .setDefault((String)null)
-                .metavar("key1,key2,...")
-                .help("Comma-separated list of keys which should be consumed in the form key1,key2,...");
-
-        parser.addArgument("--max-keys")
+                .description("Keys can be specified explicitly or by specifying the number of keys. Only one type of this options may be used.");
+        keyGroup.addArgument("--max-keys")
                 .action(store())
                 .required(false)
                 .type(Long.class)
@@ -163,6 +155,13 @@ public class VerifierCommand {
                 .metavar("MAX-KEYS")
                 .dest("maxKeys")
                 .help("The maximum amount of different keys which are consumed. Default is 1. If -1, the consumer will consume until the process is killed externally");
+        keyGroup.addArgument("--key")
+                .action(append())
+                .required(false)
+                .type(String.class)
+                .metavar("KEY")
+                .dest("keys")
+                .help("Key which should be consumed. Can be specified multiple times.");
 
         parser.addArgument("--sequence-numbers")
                 .action(store())
@@ -180,7 +179,7 @@ public class VerifierCommand {
                 .type(Integer.class)
                 .metavar("DURATION_MS")
                 .dest("maxDuration")
-                .help("Set the maximum duration for the verification. Default is 60 seconds.");
+                .help("Set the maximum duration for the verification in milliseconds. If this value is -1 the max duration is infinity. Default is 60 seconds.");
 
         parser.addArgument("--session-timeout")
                 .action(store())
@@ -204,7 +203,7 @@ public class VerifierCommand {
                 .setDefault("earliest")
                 .type(String.class)
                 .dest("resetPolicy")
-                .help("Set reset policy (must be either 'earliest', 'latest', or 'none'");
+                .help("Set reset policy (must be either 'earliest', 'latest', or 'none'. Default is earliest.");
 
         parser.addArgument("--assignment-strategy")
                 .action(store())
@@ -217,9 +216,9 @@ public class VerifierCommand {
         parser.addArgument("--consumer.config")
                 .action(store())
                 .required(false)
-                .type(String.class)
+                .type(new PropertiesFileArgumentType())
                 .metavar("CONFIG_FILE")
-                .help("Consumer config properties file (config options shared with command line parameters will be overridden).");
+                .help("Consumer config properties file (config options shared with command line arguments will be overridden by the arguments).");
 
         return parser;
     }

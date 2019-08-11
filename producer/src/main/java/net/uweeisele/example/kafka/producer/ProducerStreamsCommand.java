@@ -11,8 +11,8 @@ public class ProducerStreamsCommand {
         System.exit(
                 new KafkaStreamsRunner(
                     new ProducerStreamsBuilder()
-                            .withKeyValueMapper(valueTransformation(new V1CountEventMapper()))
-                            .withKeyValueMapper(valueTransformation(new V2CountEventMapper())),
+                            .withKeyValueMapper(valueTransformation(new V1CountEventMapper())),
+                            //.withKeyValueMapper(valueTransformation(new V2CountEventMapper())),
                     new CliPropertiesBuilder(ProducerStreamsCommand.class.getSimpleName(), args)
                 ).call()
         );

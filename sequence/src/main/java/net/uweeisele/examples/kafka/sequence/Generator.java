@@ -10,19 +10,23 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 
+import static java.util.Collections.singletonList;
+import static java.util.Objects.requireNonNull;
+import static java.util.UUID.randomUUID;
+
 public class Generator implements Runnable, AutoCloseable {
+
+    private final String clientName;
 
     private final Producer<String, String> producer;
 
     private final String topic;
 
-    private final int numKeys;
+    private final Set<String> keys;
 
     private final long maxMessagesPerKey;
 
@@ -43,14 +47,13 @@ public class Generator implements Runnable, AutoCloseable {
 
     private Instant start;
 
-    private List<String> keys = new ArrayList<>();
-
     private final CountDownLatch shutdownLatch = new CountDownLatch(1);
 
-    public Generator(Producer<String, String> producer, String topic, int numKeys, long maxMessagesPerKey, ThroughputThrottler throughputThrottler, Instant createTime, boolean syncProduce, EventHandler eventHandler) {
+    protected Generator(String clientName, Producer<String, String> producer, String topic, Collection<String> keys, long maxMessagesPerKey, ThroughputThrottler throughputThrottler, Instant createTime, boolean syncProduce, EventHandler eventHandler) {
+        this.clientName = clientName;
         this.producer = producer;
         this.topic = topic;
-        this.numKeys = numKeys;
+        this.keys = new LinkedHashSet<>(keys);
         this.maxMessagesPerKey = maxMessagesPerKey;
         this.throughputThrottler = throughputThrottler;
         this.createTime = createTime;
@@ -63,20 +66,11 @@ public class Generator implements Runnable, AutoCloseable {
             return;
         }
 
-        eventHandler.on(new StartupComplete());
+        eventHandler.on(new StartupComplete(clientName));
+        eventHandler.on(new KeysGenerated(clientName, keys));
 
         // negative maxMessages (-1) means "infinite"
         long maxMessagesPerKey = (this.maxMessagesPerKey < 0) ? Long.MAX_VALUE : this.maxMessagesPerKey;
-
-        keys = new ArrayList<>();
-        if (numKeys <= 0) {
-            keys.add(null);
-        } else {
-            for (int k = 0; k < numKeys; k++) {
-                keys.add(UUID.randomUUID().toString());
-            }
-            eventHandler.on(new KeysGenerated(keys));
-        }
 
         for (long i = 0; i < maxMessagesPerKey; i++) {
             for (String key : keys) {
@@ -98,8 +92,8 @@ public class Generator implements Runnable, AutoCloseable {
         }
 
         producer.close();
-        eventHandler.on(new ProducerStats(numSent, numAcked, throughputThrottler.getTargetThroughput(), getAvgThroughput()));
-        eventHandler.on(new ShutdownComplete());
+        eventHandler.on(new ProducerStats(clientName, numSent, numAcked, throughputThrottler.getTargetThroughput(), getAvgThroughput()));
+        eventHandler.on(new ShutdownComplete(clientName));
         shutdownLatch.countDown();
     }
 
@@ -119,7 +113,7 @@ public class Generator implements Runnable, AutoCloseable {
             result = producer.send(record, new EventCallback(key, value));
         } catch (Exception e) {
             synchronized (eventHandler) {
-                eventHandler.on(new FailedSend(key, value, topic, e));
+                eventHandler.on(new FailedSend(clientName, key, value, topic, e));
             }
         }
         if (syncProduce && result != null) {
@@ -185,9 +179,9 @@ public class Generator implements Runnable, AutoCloseable {
             synchronized (Generator.this.eventHandler) {
                 if (e == null) {
                     Generator.this.numAcked++;
-                    Generator.this.eventHandler.on(new SuccessfulSend(this.key, this.value, recordMetadata));
+                    Generator.this.eventHandler.on(new SuccessfulSend(clientName, this.key, this.value, recordMetadata));
                 } else {
-                    Generator.this.eventHandler.on(new FailedSend(this.key, this.value, topic, e));
+                    Generator.this.eventHandler.on(new FailedSend(clientName, this.key, this.value, topic, e));
                 }
             }
         }
@@ -199,8 +193,10 @@ public class Generator implements Runnable, AutoCloseable {
 
         private final String topic;
 
-        // If numKeys <= 0, null is used as key
-        private int numKeys = 1;
+        private String clientName = Generator.class.getSimpleName().toLowerCase();
+
+        // Default is one key
+        private Set<String> keys = new LinkedHashSet<>(singletonList(randomUUID().toString()));
 
         // If maxMessagesPerKey < 0, produce until the process is killed externally
         private long maxMessagesPerKey = -1;
@@ -219,8 +215,26 @@ public class Generator implements Runnable, AutoCloseable {
             this.topic = topic;
         }
 
+        public Builder withClientName(String clientName) {
+            this.clientName = requireNonNull(clientName);
+            return this;
+        }
+
+        // If numKeys <= 0, null is used as key
         public Builder withNumKeys(int numKeys) {
-            this.numKeys = numKeys;
+            keys = new LinkedHashSet<>();
+            if (numKeys <= 0) {
+                keys.add(null);
+            } else {
+                for (int k = 0; k < numKeys; k++) {
+                    keys.add(randomUUID().toString());
+                }
+            }
+            return this;
+        }
+
+        public Builder withKeys(Collection<String> keys) {
+            this.keys = new LinkedHashSet<>(keys);
             return this;
         }
 
@@ -230,7 +244,7 @@ public class Generator implements Runnable, AutoCloseable {
         }
 
         public Builder withThroughput(ThroughputThrottler throughputThrottler) {
-            this.throughputThrottler = throughputThrottler;
+            this.throughputThrottler = requireNonNull(throughputThrottler);
             return this;
         }
 
@@ -245,20 +259,21 @@ public class Generator implements Runnable, AutoCloseable {
         }
 
         public Builder withEventHandler(EventHandler eventHandler) {
-            this.eventHandler = eventHandler;
+            this.eventHandler = requireNonNull(eventHandler);
             return this;
         }
 
         public Generator build() {
-            return new Generator(producer, topic, numKeys, maxMessagesPerKey, throughputThrottler, createTime, syncProduce, eventHandler);
+            return new Generator(clientName, producer, topic, keys, maxMessagesPerKey, throughputThrottler, createTime, syncProduce, eventHandler);
         }
     }
 
     public static class KeysGenerated extends ClientEvent {
 
-        private List<String> keys;
+        private Collection<String> keys;
 
-        public KeysGenerated(List<String> keys) {
+        public KeysGenerated(String clientName, Collection<String> keys) {
+            super(clientName);
             this.keys = keys;
         }
 
@@ -268,7 +283,7 @@ public class Generator implements Runnable, AutoCloseable {
         }
 
         @JsonProperty
-        public List<String> keys() {
+        public Collection<String> keys() {
             return keys;
         }
     }
@@ -279,7 +294,8 @@ public class Generator implements Runnable, AutoCloseable {
         private Long value;
         private RecordMetadata recordMetadata;
 
-        public SuccessfulSend(String key, Long value, RecordMetadata recordMetadata) {
+        public SuccessfulSend(String clientName, String key, Long value, RecordMetadata recordMetadata) {
+            super(clientName);
             assert recordMetadata != null : "Expected non-null recordMetadata object.";
             this.key = key;
             this.value = value;
@@ -324,7 +340,8 @@ public class Generator implements Runnable, AutoCloseable {
         private Long value;
         private Exception exception;
 
-        public FailedSend(String key, Long value, String topic, Exception exception) {
+        public FailedSend(String clientName, String key, Long value, String topic, Exception exception) {
+            super(clientName);
             assert exception != null : "Expected non-null exception.";
             this.key = key;
             this.value = value;
@@ -370,7 +387,8 @@ public class Generator implements Runnable, AutoCloseable {
         private long targetThroughput;
         private double avgThroughput;
 
-        public ProducerStats(long sent, long acked, long targetThroughput, double avgThroughput) {
+        public ProducerStats(String clientName, long sent, long acked, long targetThroughput, double avgThroughput) {
+            super(clientName);
             this.sent = sent;
             this.acked = acked;
             this.targetThroughput = targetThroughput;
