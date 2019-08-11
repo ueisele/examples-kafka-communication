@@ -4,6 +4,7 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.kstream.KeyValueMapper;
 
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 public class Transformation<KS, VS, KD, VD> implements KeyValueMapper<KS, VS, KeyValue<? extends KD, ? extends VD>> {
 
@@ -16,8 +17,16 @@ public class Transformation<KS, VS, KD, VD> implements KeyValueMapper<KS, VS, Ke
         this.valueTransformer = valueTransformer;
     }
 
+    public static <KS, KD, V> Supplier<Transformation<KS, V, KD, V>> keyTransformation(Supplier<? extends BiFunction<? super KS, ? super V, ? extends KD>> keyTransformerSupplier) {
+        return () -> new Transformation<>(keyTransformerSupplier.get(), (ks, v) -> v);
+    }
+
     public static <KS, KD, V> Transformation<KS, V, KD, V> keyTransformation(BiFunction<? super KS, ? super V, ? extends KD> keyTransformer) {
         return new Transformation<>(keyTransformer, (ks, v) -> v);
+    }
+
+    public static <K, VS, VD> Supplier<Transformation<K, VS, K, VD>> valueTransformation(Supplier<? extends BiFunction<? super K, ? super VS, ? extends VD>> valueTransformerSupplier) {
+        return () -> new Transformation<>((k, vs) -> k, valueTransformerSupplier.get());
     }
 
     public static <K, VS, VD> Transformation<K, VS, K, VD> valueTransformation(BiFunction<? super K, ? super VS, ? extends VD> valueTransformer) {

@@ -3,6 +3,8 @@ package net.uweeisele.examples.kafka.transformer;
 import java.util.Properties;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
+
 public class RequiredValueBuilder implements Function<Properties, String> {
 
     private final String key;
@@ -13,8 +15,8 @@ public class RequiredValueBuilder implements Function<Properties, String> {
     }
 
     public RequiredValueBuilder(String key, Function<String, ? extends RuntimeException> missingExceptionBuilder) {
-        this.key = key;
-        this.missingExceptionBuilder = missingExceptionBuilder;
+        this.key = requireNonNull(key);
+        this.missingExceptionBuilder = requireNonNull(missingExceptionBuilder);
     }
 
     @Override

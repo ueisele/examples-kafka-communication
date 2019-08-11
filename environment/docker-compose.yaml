@@ -67,7 +67,7 @@ services:
     working_dir: /app
     volumes:
       - "../sequence/build/dist:/app"
-    command: bin/sequence-verified-generator.sh --broker-list kafka:19092 --max-messages-per-key ${MESSAGES_PER_KEY:-10} --num-keys ${NUM_KEYS:-2} --topic-produce source --acks -1 --topic-consume output --group-id verifier --reset-policy earliest
+    command: bin/sequence-verified-generator.sh --broker-list kafka:19092 --max-messages-per-key ${GENERATOR_MESSAGES_PER_KEY:-10} --num-keys ${GENERATOR_NUM_KEYS:-2} --topic-produce source --acks -1 --topic-consume output --group-id verifier --reset-policy earliest --max-duration ${GENERATOR_MAX_DURATION:--1}
 
   app-producer:
     image: adoptopenjdk/openjdk11
@@ -80,7 +80,7 @@ services:
     working_dir: /app
     volumes:
       - "../producer/build/dist:/app"
-    command: bin/producer.sh --property application.id=producer --property bootstrap.servers=kafka:19092 --property schema.registry.url=http://schema-registry:8081 --property acks=-1 --property auto.offset.reset=earliest --property topic.source.name=source --property topic.destination.name=intermediate
+    command: bin/producer.sh --property application.id=producer --property bootstrap.servers=kafka:19092 --property schema.registry.url=http://schema-registry:8081 --property acks=-1 --property auto.offset.reset=earliest --property topic.source.name=source --property topic.destination.name=intermediate --property mappers=${PRODUCER_MAPPERS:-v1}
 
   app-consumer:
     image: adoptopenjdk/openjdk11

@@ -6,40 +6,43 @@ import net.uweeisele.examples.kafka.transformer.*;
 import org.apache.avro.generic.IndexedRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.KeyValue;
-import org.apache.kafka.streams.kstream.KeyValueMapper;
 
 import java.util.Properties;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static io.confluent.kafka.serializers.AbstractKafkaAvroSerDeConfig.KEY_SUBJECT_NAME_STRATEGY;
+import static java.lang.String.join;
 import static java.util.Objects.requireNonNull;
 import static net.uweeisele.examples.kafka.transformer.AvroSerdeBuilder.avroSerdeBuilder;
+import static net.uweeisele.examples.kafka.transformer.Transformation.valueTransformation;
 
 public class ProducerStreamsBuilder implements Function<Properties, KafkaStreams>, Supplier<KafkaStreams> {
 
     private static final String KEY_TOPIC_SOURCE_NAME = "topic.source.name";
     private static final String KEY_TOPIC_DESTINATION_NAME = "topic.destination.name";
+    private static final String KEY_MAPPERS = "mappers";
+    private static final String MAPPERS_VALUE_DELIMITER = ",";
 
     private final KafkaStreamsBuilder kafkaStreamsBuilder;
     private final TransformerTopologyBuilder<String, String, String, IndexedRecord> topologyBuilder;
-    private final KeyValueMapperList<String, String, String, IndexedRecord> keyValueMappers;
+    private final PropertiesKeyValueMapperBuilder<String, String, String, IndexedRecord> eventMapperBuilder;
     private final Properties internalProperties;
 
     private Supplier<Properties> propertiesSupplier = Properties::new;
 
     public ProducerStreamsBuilder() {
-        this(new KafkaStreamsBuilder(), new TransformerTopologyBuilder<>(), new KeyValueMapperList<>(), new Properties());
+        this(new KafkaStreamsBuilder(), new TransformerTopologyBuilder<>(), new PropertiesKeyValueMapperBuilder<>(new ListValueBuilder(new RequiredValueBuilder(KEY_MAPPERS), MAPPERS_VALUE_DELIMITER)), new Properties());
     }
 
     ProducerStreamsBuilder(KafkaStreamsBuilder kafkaStreamsBuilder,
                            TransformerTopologyBuilder<String, String, String, IndexedRecord> topologyBuilder,
-                           KeyValueMapperList<String, String, String, IndexedRecord> keyValueMappers,
+                           PropertiesKeyValueMapperBuilder<String, String, String, IndexedRecord> eventMapperBuilder,
                            Properties internalProperties) {
         this.kafkaStreamsBuilder = kafkaStreamsBuilder;
         this.topologyBuilder = topologyBuilder;
-        this.keyValueMappers = keyValueMappers;
+        this.eventMapperBuilder = eventMapperBuilder;
         this.internalProperties = internalProperties;
     }
 
@@ -70,7 +73,7 @@ public class ProducerStreamsBuilder implements Function<Properties, KafkaStreams
                             .withKeySerde(Serdes.String())
                             .withValueSerde(Serdes.String())
                         ))
-                    .withKeyValueMapper(keyValueMappers)
+                    .withKeyValueMapperBuilder(eventMapperBuilder)
                     .withDestinationTopicBuilder(new ProducedTopic.Builder<String, IndexedRecord>()
                             .withTopicBuilder(new Topic.Builder<String, IndexedRecord>()
                             .withNameBuilder(new RequiredValueBuilder(KEY_TOPIC_DESTINATION_NAME))
@@ -92,23 +95,28 @@ public class ProducerStreamsBuilder implements Function<Properties, KafkaStreams
         return this;
     }
 
-    public ProducerStreamsBuilder withSourceTopicName(String name) {
+    public ProducerStreamsBuilder withRegisteredMapper(String key, Supplier<? extends BiFunction<String, String, ? extends IndexedRecord>> mapperSupplier) {
+        eventMapperBuilder.withRegisteredKeyValueMapper(requireNonNull(key), valueTransformation(requireNonNull(mapperSupplier)));
+        return this;
+    }
+
+    public ProducerStreamsBuilder withDefaultSourceTopicName(String name) {
         internalProperties.setProperty(KEY_TOPIC_SOURCE_NAME, requireNonNull(name));
         return this;
     }
 
-    public ProducerStreamsBuilder withDestinationTopicName(String name) {
+    public ProducerStreamsBuilder withDefaultDestinationTopicName(String name) {
         internalProperties.setProperty(KEY_TOPIC_DESTINATION_NAME, requireNonNull(name));
         return this;
     }
 
-    public ProducerStreamsBuilder withSubjectNameStrategy(Class<? extends SubjectNameStrategy> subjectNameStrategy) {
+    public ProducerStreamsBuilder withDefaultSubjectNameStrategy(Class<? extends SubjectNameStrategy> subjectNameStrategy) {
         internalProperties.setProperty(KEY_SUBJECT_NAME_STRATEGY, requireNonNull(subjectNameStrategy).getName());
         return this;
     }
 
-    public ProducerStreamsBuilder withKeyValueMapper(KeyValueMapper<String, String, KeyValue<? extends String, ? extends IndexedRecord>> keyValueMapper) {
-        keyValueMappers.with(keyValueMapper);
+    public ProducerStreamsBuilder withDefaultMappers(String... mappers) {
+        internalProperties.setProperty(KEY_MAPPERS, join(MAPPERS_VALUE_DELIMITER, requireNonNull(mappers)));
         return this;
     }
 
