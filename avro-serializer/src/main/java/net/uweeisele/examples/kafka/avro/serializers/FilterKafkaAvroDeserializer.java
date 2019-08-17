@@ -78,6 +78,9 @@ public class FilterKafkaAvroDeserializer extends KafkaAvroDeserializer {
         }
     }
 
+    // Fragestellung: wann liegt ein Problem an den Daten und wann an einem externen System
+    // -> externes System: Retry
+    // > daten: verwerfen oder dead letter queue
     private Schema getWriterSchema(int id) {
         try {
             return this.schemaRegistry.getById(id);
@@ -111,4 +114,5 @@ public class FilterKafkaAvroDeserializer extends KafkaAvroDeserializer {
             throw new SerializationException("Error retrieving Avro schema for id " + id, e);
         }
     }
+
 }
