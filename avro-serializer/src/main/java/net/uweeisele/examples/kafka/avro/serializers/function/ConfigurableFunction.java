@@ -6,11 +6,13 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
+
 @FunctionalInterface
 public interface ConfigurableFunction<T, R> extends Function<T, R>, Configurable {
 
     default <V> ConfigurableFunction<V, R> compose(Function<? super V, ? extends T> before) {
-        Objects.requireNonNull(before);
+        requireNonNull(before);
         return new ConfigurableFunction<>() {
             @Override
             public R apply(V t) {
@@ -27,7 +29,7 @@ public interface ConfigurableFunction<T, R> extends Function<T, R>, Configurable
     }
 
     default <V, U> ConfigurableBiFunction<V, U, R> compose(BiFunction<? super V, ? super U, ? extends T> before) {
-        Objects.requireNonNull(before);
+        requireNonNull(before);
         return new ConfigurableBiFunction<>() {
             @Override
             public R apply(V t, U u) {
@@ -44,7 +46,7 @@ public interface ConfigurableFunction<T, R> extends Function<T, R>, Configurable
     }
 
     default <V> ConfigurableFunction<T, V> andThen(Function<? super R, ? extends V> after) {
-        Objects.requireNonNull(after);
+        requireNonNull(after);
         return new ConfigurableFunction<>() {
             @Override
             public V apply(T t) {
@@ -61,7 +63,7 @@ public interface ConfigurableFunction<T, R> extends Function<T, R>, Configurable
     }
 
     default <V, U> ConfigurableBiFunction<T, U, V> andThen(BiFunction<? super R, ? super U, ? extends V> after) {
-        Objects.requireNonNull(after);
+        requireNonNull(after);
         return new ConfigurableBiFunction<>() {
             @Override
             public V apply(T t, U u) {
@@ -78,7 +80,7 @@ public interface ConfigurableFunction<T, R> extends Function<T, R>, Configurable
     }
 
     default ConfigurableFunction<T, R> andPeekBefore(Consumer<? super T> before) {
-        Objects.requireNonNull(before);
+        requireNonNull(before);
         return new ConfigurableFunction<>() {
             @Override
             public R apply(T t) {
@@ -96,7 +98,7 @@ public interface ConfigurableFunction<T, R> extends Function<T, R>, Configurable
     }
 
     default ConfigurableFunction<T, R> andPeekAfter(Consumer<? super R> after) {
-        Objects.requireNonNull(after);
+        requireNonNull(after);
         return new ConfigurableFunction<>() {
             @Override
             public R apply(T t) {

@@ -1,17 +1,18 @@
 package net.uweeisele.examples.kafka.avro.serializers.function;
 
-import java.util.Objects;
 import java.util.Properties;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import static java.util.Objects.requireNonNull;
+
 @FunctionalInterface
 public interface ConfigurableBiFunction<T, U, R> extends BiFunction<T, U, R>, Configurable {
 
     default <V> ConfigurableBiFunction<T, U, V> andThen(Function<? super R, ? extends V> after) {
-        Objects.requireNonNull(after);
+        requireNonNull(after);
         return new ConfigurableBiFunction<>() {
             @Override
             public V apply(T t, U u) {
@@ -36,7 +37,7 @@ public interface ConfigurableBiFunction<T, U, R> extends BiFunction<T, U, R>, Co
     }
 
     default ConfigurableBiFunction<T, U, R> andPeekBefore(BiConsumer<? super T, ? super U> before) {
-        Objects.requireNonNull(before);
+        requireNonNull(before);
         return new ConfigurableBiFunction<>() {
             @Override
             public R apply(T t, U u) {
@@ -54,7 +55,7 @@ public interface ConfigurableBiFunction<T, U, R> extends BiFunction<T, U, R>, Co
     }
 
     default ConfigurableBiFunction<T, U, R> andPeekAfter(Consumer<? super R> after) {
-        Objects.requireNonNull(after);
+        requireNonNull(after);
         return new ConfigurableBiFunction<>() {
             @Override
             public R apply(T t, U u) {
