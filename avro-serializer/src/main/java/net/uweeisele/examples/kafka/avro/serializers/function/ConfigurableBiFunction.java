@@ -73,4 +73,37 @@ public interface ConfigurableBiFunction<T, U, R> extends BiFunction<T, U, R>, Co
         };
     }
 
+    default ConfigurableBiConsumer<T, U> andConsume(Consumer<? super R> after) {
+        requireNonNull(after);
+        return new ConfigurableBiConsumer<>() {
+            @Override
+            public void accept(T t, U u) {
+                after.accept(ConfigurableBiFunction.this.apply(t, u));
+            }
+            @Override
+            public void configure(Properties properties) {
+                ConfigurableBiFunction.this.configure(properties);
+                if (after instanceof Configurable) {
+                    ((Configurable) after).configure(properties);
+                }
+            }
+        };
+    }
+
+    static <T, U, R> ConfigurableBiFunction<T, U, R> wrap(BiFunction<? super T, ? super U, ? extends R> biFunction) {
+        requireNonNull(biFunction);
+        return new ConfigurableBiFunction<>() {
+            @Override
+            public R apply(T t, U u) {
+                return biFunction.apply(t, u);
+            }
+            @Override
+            public void configure(Properties properties) {
+                if (biFunction instanceof Configurable) {
+                    ((Configurable) biFunction).configure(properties);
+                }
+            }
+        };
+    }
+
 }

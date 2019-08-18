@@ -8,8 +8,6 @@ import net.uweeisele.examples.kafka.avro.serializers.extractor.SchemaRegistryWri
 import net.uweeisele.examples.kafka.avro.serializers.extractor.WriterSchemaIdPayloadExtractor;
 import net.uweeisele.examples.kafka.avro.serializers.extractor.deserializer.DatumReaderBuilder;
 import net.uweeisele.examples.kafka.avro.serializers.function.ConfigurableBiFunction;
-import net.uweeisele.examples.kafka.avro.serializers.function.ConfigurableFunction;
-import net.uweeisele.examples.kafka.avro.serializers.payload.AvroBytesPayload;
 import net.uweeisele.examples.kafka.avro.serializers.payload.AvroBytesWriterReaderSchemaPayload;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
@@ -19,6 +17,8 @@ import java.util.Map;
 import java.util.Properties;
 
 import static java.util.Objects.requireNonNull;
+import static net.uweeisele.examples.kafka.avro.serializers.function.ConfigurableFunction.wrap;
+import static net.uweeisele.examples.kafka.avro.serializers.payload.AvroBytesPayload.bytesToAvroBytesFunction;
 
 public class KafkaAvroRecordDeserializer<T extends IndexedRecord> implements Deserializer<T> {
 
@@ -43,8 +43,7 @@ public class KafkaAvroRecordDeserializer<T extends IndexedRecord> implements Des
     }
 
     private static <T extends IndexedRecord> ConfigurableBiFunction<byte[], Schema, T> buildDeserializerFunction(DatumReaderBuilder<T> datumReaderBuilder, SchemaRegistryClientBuilder schemaRegistryClientBuilder) {
-        return ConfigurableFunction.<byte[]>identity()
-                .andThen(AvroBytesPayload::new)
+        return wrap(bytesToAvroBytesFunction())
                 .andThen(new WriterSchemaIdPayloadExtractor<>())
                 .andThen(new SchemaRegistryWriterSchemaPayloadExtractor<>(schemaRegistryClientBuilder))
                 .andThen(new ReaderSchemaEnricher<>(AvroBytesWriterReaderSchemaPayload::new))

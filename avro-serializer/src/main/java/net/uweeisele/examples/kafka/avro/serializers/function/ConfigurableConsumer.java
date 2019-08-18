@@ -70,4 +70,20 @@ public interface ConfigurableConsumer<T> extends Consumer<T>, Configurable {
         return t -> {};
     }
 
+    static <T> ConfigurableConsumer<T> wrap(Consumer<? super T> consumer) {
+        requireNonNull(consumer);
+        return new ConfigurableConsumer<T>() {
+            @Override
+            public void accept(T t) {
+                consumer.accept(t);
+            }
+            @Override
+            public void configure(Properties properties) {
+                if(consumer instanceof Configurable) {
+                    ((Configurable) consumer).configure(properties);
+                }
+            }
+        };
+    }
+
 }

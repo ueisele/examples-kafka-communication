@@ -79,4 +79,20 @@ public interface ConfigurableBiConsumer<T, U> extends BiConsumer<T, U>, Configur
     static <T, U> ConfigurableBiConsumer<T, U> noop() {
         return (t, u) -> {};
     }
+
+    static <T, U> ConfigurableBiConsumer<T, U> wrap(BiConsumer<? super T, ? super U> biConsumer) {
+        requireNonNull(biConsumer);
+        return new ConfigurableBiConsumer<T, U>() {
+            @Override
+            public void accept(T t, U u) {
+                biConsumer.accept(t, u);
+            }
+            @Override
+            public void configure(Properties properties) {
+                if(biConsumer instanceof Configurable) {
+                    ((Configurable) biConsumer).configure(properties);
+                }
+            }
+        };
+    }
 }

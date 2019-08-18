@@ -1,6 +1,7 @@
 package net.uweeisele.examples.kafka.avro.serializers.payload;
 
 import java.nio.ByteBuffer;
+import java.util.function.Function;
 
 import static java.util.Objects.requireNonNull;
 
@@ -24,6 +25,14 @@ public class AvroBytesPayload implements AvroBytes {
 
     public AvroBytesPayload(Payload payload) {
         this.payload = requireNonNull(payload);
+    }
+
+    public static Function<byte[], AvroBytesPayload> bytesToAvroBytesFunction() {
+        return AvroBytesPayload::new;
+    }
+
+    public static Function<ByteBuffer, AvroBytesPayload> byteBufferToAvroBytesFunction() {
+        return AvroBytesPayload::new;
     }
 
     public AvroBytesPayload withAvroBytes(byte[] avroBytes) {

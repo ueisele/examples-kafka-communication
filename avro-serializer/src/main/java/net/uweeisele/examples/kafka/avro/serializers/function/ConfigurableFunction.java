@@ -1,6 +1,5 @@
 package net.uweeisele.examples.kafka.avro.serializers.function;
 
-import java.util.Objects;
 import java.util.Properties;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -116,8 +115,40 @@ public interface ConfigurableFunction<T, R> extends Function<T, R>, Configurable
         };
     }
 
+    default ConfigurableConsumer<T> andConsume(Consumer<? super R> after) {
+        requireNonNull(after);
+        return new ConfigurableConsumer<>() {
+            @Override
+            public void accept(T t) {
+                after.accept(ConfigurableFunction.this.apply(t));
+            }
+            @Override
+            public void configure(Properties properties) {
+                ConfigurableFunction.this.configure(properties);
+                if (after instanceof Configurable) {
+                    ((Configurable) after).configure(properties);
+                }
+            }
+        };
+    }
+
     static <T> ConfigurableFunction<T, T> identity() {
         return t -> t;
     }
 
+    static <T, R> ConfigurableFunction<T, R> wrap(Function<? super T, ? extends R> function) {
+        requireNonNull(function);
+        return new ConfigurableFunction<>() {
+            @Override
+            public R apply(T t) {
+                return function.apply(t);
+            }
+            @Override
+            public void configure(Properties properties) {
+                if (function instanceof Configurable) {
+                    ((Configurable) function).configure(properties);
+                }
+            }
+        };
+    }
 }
