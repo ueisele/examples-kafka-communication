@@ -1,8 +1,8 @@
 package net.uweeisele.examples.kafka.avro.serializers.extractor.deserializer;
 
 import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericDatumReader;
 import org.apache.avro.specific.SpecificData;
-import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificRecord;
 import org.apache.kafka.common.errors.SerializationException;
 
@@ -15,10 +15,10 @@ public class SpecificDatumReaderBuilder<D extends SpecificRecord> extends Record
     private final Map<String, Schema> readerSchemaCache = new ConcurrentHashMap<>();
 
     public SpecificDatumReaderBuilder(Class<D> type) {
-        this(type, SpecificDatumReader::new);
+        this(type, SchemaAwareDatumReader.Specific::new);
     }
 
-    protected SpecificDatumReaderBuilder(Class<D> type, BiFunction<Schema, Schema, SpecificDatumReader<D>> datumReaderFactory) {
+    protected  <T extends GenericDatumReader<D> & SchemaAwareDatumReader<D>> SpecificDatumReaderBuilder(Class<D> type, BiFunction<Schema, Schema, T> datumReaderFactory) {
         super(type, datumReaderFactory);
     }
 

@@ -1,7 +1,6 @@
 package net.uweeisele.examples.kafka.avro.serializers.extractor.deserializer;
 
 import org.apache.avro.Schema;
-import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.Decoder;
 import org.apache.kafka.common.errors.SerializationException;
 
@@ -10,20 +9,15 @@ import java.io.IOException;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-public class TypeSafeDatumReader<D> implements DatumReader<D> {
+public class TypeSafeDatumReader<D> implements SchemaAwareDatumReader<D> {
 
     private final Class<D> type;
 
-    private final DatumReader<D> datumReader;
+    private final SchemaAwareDatumReader<D> datumReader;
 
-    public TypeSafeDatumReader(Class<D> type, DatumReader<D> datumReader) {
+    public TypeSafeDatumReader(Class<D> type, SchemaAwareDatumReader<D> datumReader) {
         this.type = requireNonNull(type);
         this.datumReader = requireNonNull(datumReader);
-    }
-
-    @Override
-    public void setSchema(Schema schema) {
-        datumReader.setSchema(schema);
     }
 
     @Override
@@ -35,4 +29,31 @@ public class TypeSafeDatumReader<D> implements DatumReader<D> {
         return value;
     }
 
+    @Override
+    public Schema getSchema() {
+        return datumReader.getSchema();
+    }
+
+    @Override
+    public void setSchema(Schema schema) {
+        datumReader.setSchema(schema);
+    }
+
+    @Override
+    public Schema getExpected() {
+        return datumReader.getExpected();
+    }
+
+    @Override
+    public void setExpected(Schema reader) {
+            datumReader.setExpected(reader);
+    }
+
+    @Override
+    public String toString() {
+        return "TypeSafeDatumReader{" +
+                "datumReader=" + datumReader +
+                ", type=" + type +
+                '}';
+    }
 }

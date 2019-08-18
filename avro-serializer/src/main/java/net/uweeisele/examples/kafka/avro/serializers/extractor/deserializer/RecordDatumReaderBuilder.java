@@ -4,7 +4,6 @@ import org.apache.avro.Schema;
 import org.apache.avro.SchemaCompatibility;
 import org.apache.avro.SchemaCompatibility.SchemaPairCompatibility;
 import org.apache.avro.generic.IndexedRecord;
-import org.apache.avro.io.DatumReader;
 import org.apache.kafka.common.errors.SerializationException;
 
 import java.util.Map;
@@ -18,17 +17,17 @@ import static org.apache.avro.SchemaCompatibility.checkReaderWriterCompatibility
 public abstract class RecordDatumReaderBuilder<D extends IndexedRecord> implements DatumReaderBuilder<D> {
 
     private final Class<D> type;
-    private final BiFunction<Schema, Schema, ? extends DatumReader<D>> datumReaderFactory;
+    private final BiFunction<Schema, Schema, ? extends SchemaAwareDatumReader<D>> datumReaderFactory;
 
     private final Map<SchemaPair, SchemaPairCompatibility> compatibilityCache = new ConcurrentHashMap<>();
 
-    public RecordDatumReaderBuilder(Class<D> type, BiFunction<Schema, Schema, ? extends DatumReader<D>> datumReaderFactory) {
+    public RecordDatumReaderBuilder(Class<D> type, BiFunction<Schema, Schema, ? extends SchemaAwareDatumReader<D>> datumReaderFactory) {
         this.type = requireNonNull(type);
         this.datumReaderFactory = requireNonNull(datumReaderFactory);
     }
 
     @Override
-    public DatumReader<D> build(Schema writerSchema, Schema readerSchema) {
+    public SchemaAwareDatumReader<D> build(Schema writerSchema, Schema readerSchema) {
         assertIsTypeRecord(writerSchema);
         Schema actualReaderSchema = readerSchema != null ? readerSchema : getReaderSchema(writerSchema);
         assertWriterAndReaderSchemaCompatible(writerSchema, actualReaderSchema);

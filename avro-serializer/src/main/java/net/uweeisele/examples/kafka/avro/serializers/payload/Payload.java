@@ -1,8 +1,11 @@
 package net.uweeisele.examples.kafka.avro.serializers.payload;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
@@ -34,6 +37,12 @@ public class Payload {
 
     public Map<Key<?>, ?> content() {
         return unmodifiableMap(content);
+    }
+
+    public Map<String, String> printableContent() {
+        return content.entrySet().stream()
+                .map(e -> Pair.of(e.getKey().toString(), e.getValue() != null ? e.getValue().toString() : null))
+                .collect(Collectors.toMap(Pair::getKey, Pair::getValue));
     }
 
     public static class Key<T> {

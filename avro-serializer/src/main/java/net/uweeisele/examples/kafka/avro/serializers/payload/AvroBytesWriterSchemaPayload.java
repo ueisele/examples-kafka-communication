@@ -19,7 +19,8 @@ public class AvroBytesWriterSchemaPayload extends AvroBytesPayload implements Wr
 
     @Override
     public AvroBytesWriterSchemaPayload with(Consumer<Payload> action) {
-        return (AvroBytesWriterSchemaPayload) super.with(action);
+        action.accept(payload());
+        return this;
     }
 
     @Override

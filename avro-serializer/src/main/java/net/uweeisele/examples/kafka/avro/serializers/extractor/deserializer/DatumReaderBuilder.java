@@ -5,17 +5,17 @@ import org.apache.avro.io.DatumReader;
 
 import java.util.function.BiFunction;
 
-public interface DatumReaderBuilder<D> extends BiFunction<Schema, Schema, DatumReader<D>> {
+public interface DatumReaderBuilder<D> extends BiFunction<Schema, Schema, SchemaAwareDatumReader<D>> {
 
     default DatumReader<D> build(Schema writerSchema) {
         return build(writerSchema, null);
     }
 
     @Override
-    default DatumReader<D> apply(Schema writerSchema, Schema readerSchema) {
+    default SchemaAwareDatumReader<D> apply(Schema writerSchema, Schema readerSchema) {
         return build(writerSchema, readerSchema);
     }
 
-    DatumReader<D> build(Schema writerSchema, Schema readerSchema);
+    SchemaAwareDatumReader<D> build(Schema writerSchema, Schema readerSchema);
 
 }

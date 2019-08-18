@@ -2,16 +2,24 @@ package net.uweeisele.examples.kafka.avro.serializers.payload;
 
 import org.apache.avro.Schema;
 
-public class AvroBytesWriterReaderSchemaPayload<T extends AvroBytes & WriterSchema> extends AvroBytesWriterSchemaPayload implements ReaderSchema {
+import java.util.function.Consumer;
+
+public class AvroBytesWriterReaderSchemaPayload extends AvroBytesWriterSchemaPayload implements ReaderSchema {
 
 
-    public AvroBytesWriterReaderSchemaPayload(T payload) {
+    public <T extends AvroBytes & WriterSchema> AvroBytesWriterReaderSchemaPayload(T payload) {
         super(payload);
     }
 
     @Override
     public AvroBytesWriterReaderSchemaPayload withReaderSchema(Schema readerSchema) {
         payload.put(ReaderSchema.KEY, readerSchema);
+        return this;
+    }
+
+    @Override
+    public AvroBytesWriterReaderSchemaPayload with(Consumer<Payload> action) {
+        action.accept(payload());
         return this;
     }
 
