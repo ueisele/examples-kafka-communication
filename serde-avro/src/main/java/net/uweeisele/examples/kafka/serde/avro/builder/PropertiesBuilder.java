@@ -1,4 +1,4 @@
-package net.uweeisele.examples.kafka.serde.avro.collection;
+package net.uweeisele.examples.kafka.serde.avro.builder;
 
 import java.util.Map;
 import java.util.Properties;

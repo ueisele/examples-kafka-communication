@@ -1,6 +1,6 @@
 package net.uweeisele.examples.kafka.serde.avro.deserializers;
 
-import net.uweeisele.examples.kafka.serde.avro.collection.PropertiesBuilder;
+import net.uweeisele.examples.kafka.serde.avro.builder.PropertiesBuilder;
 import net.uweeisele.examples.kafka.serde.avro.deserializers.payload.*;
 import net.uweeisele.examples.kafka.serde.avro.function.Configurable;
 import net.uweeisele.examples.kafka.serde.avro.function.ConfigurableFunction;
