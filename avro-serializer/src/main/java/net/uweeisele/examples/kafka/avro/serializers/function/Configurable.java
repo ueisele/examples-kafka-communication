@@ -4,5 +4,6 @@ import java.util.Properties;
 
 public interface Configurable {
 
-    default void configure(Properties properties) { }
+    default void configure(Properties properties) {}
+
 }

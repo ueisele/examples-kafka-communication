@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Properties;
 
 import static java.util.Objects.requireNonNull;
+import static net.uweeisele.examples.kafka.avro.serializers.collection.PropertiesBuilder.ofNormalized;
 import static net.uweeisele.examples.kafka.avro.serializers.function.ConfigurableFunction.wrap;
 import static net.uweeisele.examples.kafka.avro.serializers.payload.AvroBytesPayload.bytesToAvroBytesFunction;
 
@@ -57,9 +58,7 @@ public class KafkaAvroRecordDeserializer<T extends IndexedRecord> implements Des
     }
 
     public void configure(Map<String, ?> configs) {
-        Properties properties = new Properties();
-        properties.putAll(configs);
-        configure(properties);
+        configure(ofNormalized(configs));
     }
 
     public void configure(Properties properties) {
