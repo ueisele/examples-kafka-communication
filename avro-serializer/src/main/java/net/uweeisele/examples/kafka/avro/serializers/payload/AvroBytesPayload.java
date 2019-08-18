@@ -37,7 +37,7 @@ public class AvroBytesPayload implements AvroBytes {
     }
 
     public AvroBytesPayload withAvroBytes(byte[] avroBytes) {
-        return withAvroBytes(avroBytes != null ? ByteBuffer.wrap(avroBytes) : null);
+        return withAvroBytes(ByteBuffer.wrap(avroBytes));
     }
 
     @Override

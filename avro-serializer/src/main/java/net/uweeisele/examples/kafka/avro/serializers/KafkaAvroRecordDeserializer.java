@@ -11,6 +11,7 @@ import net.uweeisele.examples.kafka.avro.serializers.function.ConfigurableBiFunc
 import net.uweeisele.examples.kafka.avro.serializers.payload.AvroBytesWriterReaderSchemaPayload;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
+import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import java.util.Map;
@@ -67,10 +68,18 @@ public class KafkaAvroRecordDeserializer<T extends IndexedRecord> implements Des
 
     @Override
     public T deserialize(String topic, byte[] data) {
-        return deserialize(topic, data, null);
+        return deserialize(topic, null, data);
     }
 
-    public T deserialize(String topic, byte[] data, Schema readerSchema) {
+    @Override
+    public T deserialize(String topic, Headers headers, byte[] data) {
+        return deserialize(topic, headers, data, null);
+    }
+
+    public T deserialize(String topic, Headers headers, byte[] data, Schema readerSchema) {
+        if (data == null) {
+            return null;
+        }
         return deserializer.apply(data, readerSchema);
     }
 }
