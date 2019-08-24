@@ -32,4 +32,5 @@ include 'schema-v2'
 include 'producer'
 include 'consumer'
 include 'serde-avro'
+include 'oo-serde'
 
