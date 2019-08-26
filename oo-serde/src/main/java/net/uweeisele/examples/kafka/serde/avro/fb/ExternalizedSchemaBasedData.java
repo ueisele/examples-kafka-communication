@@ -2,7 +2,9 @@ package net.uweeisele.examples.kafka.serde.avro.fb;
 
 import java.nio.ByteBuffer;
 
-public interface BinaryData {
+public interface ExternalizedSchemaBasedData<I> {
+
+    I schemaId();
 
     ByteBuffer contentBytes();
 }
