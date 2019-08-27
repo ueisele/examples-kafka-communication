@@ -203,7 +203,23 @@ public class AvroProtocolSerdeFactory {
 
     }
 
-    public static class AvroProtocol {
+    public static class AvroDeserializer {
+
+        private final Protocol<Integer, Decoder, Consumer<Encoder>> avroProtocol;
+
+        public AvroDeserializer(Protocol<Integer, Decoder, Consumer<Encoder>> avroProtocol) {
+            this.avroProtocol = avroProtocol;
+        }
+    }
+
+    public interface Protocol<I, D, E> {
+
+        ProtocolDecoder<I, D> decoder(Payload<byte[]> input);
+
+        ProtocolEncoder<I, E> encoder(Payload<?> input);
+    }
+
+    public static class AvroProtocol implements Protocol<Integer, Decoder, Consumer<Encoder>> {
 
         private static final byte MAGIC_BYTE_VALUE = 0;
 
@@ -222,6 +238,7 @@ public class AvroProtocolSerdeFactory {
             this.config = config;
         }
 
+        @Override
         public ProtocolDecoder<Integer, Decoder> decoder(Payload<byte[]> input) {
             ByteBuffer inputBuffer = ByteBuffer.wrap(input.get());
             if (inputBuffer.get(MAGIC_BYTE_INDEX) != MAGIC_BYTE_VALUE)
@@ -240,6 +257,7 @@ public class AvroProtocolSerdeFactory {
             };
         }
 
+        @Override
         public ProtocolEncoder<Integer, Consumer<Encoder>> encoder(Payload<?> input) {
             return new ProtocolEncoder<>() {
 
