@@ -31,7 +31,7 @@ versions += [
   argparse4j: "0.8.1",
   commons_lang: "3.9",
   jackson: "2.9.9",
-  junit: "4.13-beta-3",
+  junit: "5.5.1",
   log4j: "1.2.17",
   slf4j: "1.7.26"
 ]
@@ -50,7 +50,7 @@ libs += [
   commons_lang: "org.apache.commons:commons-lang3:$versions.commons_lang",
   jacksonDatabind: "com.fasterxml.jackson.core:jackson-databind:$versions.jackson",
   jacksonJDK8Datatypes: "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:$versions.jackson",
-  junit: "junit:junit:$versions.junit", 
+  junit: "org.junit.jupiter:junit-jupiter-engine:$versions.junit",
   log4j: "log4j:log4j:$versions.log4j",
   slf4jApi: "org.slf4j:slf4j-api:$versions.slf4j",
   slf4jlog4j: "org.slf4j:slf4j-log4j12:$versions.slf4j",

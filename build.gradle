@@ -119,6 +119,10 @@ subprojects {
         options.encoding = UTF_8
     }
 
+    test {
+        useJUnitPlatform()
+    }
+
     task copyDependantLibs(type: Copy) {
         from (configurations.testRuntimeClasspath) {
             include('slf4j-log4j12*')
