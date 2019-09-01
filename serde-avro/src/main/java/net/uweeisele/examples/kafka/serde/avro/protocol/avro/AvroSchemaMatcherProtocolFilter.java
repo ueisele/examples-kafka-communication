@@ -3,17 +3,20 @@ package net.uweeisele.examples.kafka.serde.avro.protocol.avro;
 import net.uweeisele.examples.kafka.serde.avro.protocol.Payload;
 import net.uweeisele.examples.kafka.serde.avro.protocol.Protocol;
 import net.uweeisele.examples.kafka.serde.avro.protocol.ProtocolFilter;
+import net.uweeisele.examples.kafka.serde.avro.protocol.exception.UnexpectedDataException;
+import net.uweeisele.examples.kafka.serde.avro.protocol.exception.UnsupportedDataException;
+import net.uweeisele.examples.kafka.serde.avro.protocol.matcher.SchemaMatcher;
 import net.uweeisele.examples.kafka.serde.avro.protocol.matcher.SchemaMatcher.SchemaClassification;
-import net.uweeisele.examples.kafka.serde.avro.protocol.matcher.TriPatternSchemaMatcher;
 import org.apache.avro.Schema;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 public class AvroSchemaMatcherProtocolFilter<C> implements ProtocolFilter<Protocol<Schema, C>> {
 
-    private final TriPatternSchemaMatcher schemaMatcher;
+    private final SchemaMatcher schemaMatcher;
 
-    public AvroSchemaMatcherProtocolFilter(TriPatternSchemaMatcher schemaMatcher) {
+    public AvroSchemaMatcherProtocolFilter(SchemaMatcher schemaMatcher) {
         this.schemaMatcher = requireNonNull(schemaMatcher);
     }
 
@@ -23,9 +26,9 @@ public class AvroSchemaMatcherProtocolFilter<C> implements ProtocolFilter<Protoc
         SchemaClassification classification = schemaMatcher.matches(schema.getFullName());
         switch (classification) {
             case UNKNOWN:
-                break;
+                throw new UnexpectedDataException(format("Avro data, serialized with schema %s is unexpected.", schema.getFullName()), input);
             case KNOWN:
-                break;
+                throw new UnsupportedDataException(format("Avro data, serialized with schema %s is expected, but unsupported.", schema.getFullName()), input);
             case ACCEPTED:
             default:
         }

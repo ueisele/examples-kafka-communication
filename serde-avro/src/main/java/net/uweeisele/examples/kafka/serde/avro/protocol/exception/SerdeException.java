@@ -1,51 +1,54 @@
 package net.uweeisele.examples.kafka.serde.avro.protocol.exception;
 
-import java.util.HashMap;
+import net.uweeisele.examples.kafka.serde.avro.protocol.ContextSupplier;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
-public class SerdeException extends RuntimeException {
+import static java.util.stream.Collectors.toMap;
 
-    private final Map<String, Object> attributes = new HashMap<>();
+public class SerdeException extends RuntimeException implements ContextSupplier {
+
+    private final List<ContextSupplier> contextSuppliers = new ArrayList<>();
 
     public SerdeException(String message) {
-        this(message, new HashMap<>());
+        this(message, (Throwable) null);
     }
 
-    public SerdeException(String message, Map<String, Object> attributes) {
-        this(message, null, attributes);
+    public SerdeException(String message, ContextSupplier contextSupplier) {
+        this(message, null, contextSupplier);
     }
 
     public SerdeException(String message, Throwable cause) {
-        this(message, cause, new HashMap<>());
+        this(message, cause, null);
     }
 
-    public SerdeException(String message, Throwable cause, Map<String, Object> attributes) {
+    public SerdeException(String message, Throwable cause, ContextSupplier contextSupplier) {
         super(message, cause);
-        if (cause instanceof SerdeException) {
-            this.attributes.putAll(((SerdeException) cause).getAttributes());
+        if (cause instanceof ContextSupplier) {
+            addContextSupplier(((ContextSupplier) cause));
         }
-        this.attributes.putAll(attributes);
+        addContextSupplier(contextSupplier);
     }
 
-    public Map<String, Object> getAttributes() {
-        return attributes;
+    @Override
+    public Map<String, String> context() {
+        return contextSuppliers.stream()
+                .flatMap(contextSupplier -> contextSupplier.context().entrySet().stream())
+                .collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    public SerdeException withAttributes(Map<String, Object> attributes) {
-        this.attributes.putAll(attributes);
+
+    public SerdeException addContext(Map<String, String> context) {
+        return addContextSupplier(() -> context);
+    }
+
+    public SerdeException addContextSupplier(ContextSupplier contextSupplier) {
+        if (contextSupplier != null) {
+            this.contextSuppliers.add(contextSupplier);
+        }
         return this;
     }
 
-    public SerdeException withAttribute(String key, Object value) {
-        this.attributes.put(key, value);
-        return this;
-    }
-
-    public <T> T getAttribute(String key, Class<T> type) {
-        Object value = attributes.get(key);
-        if (value != null && !type.isAssignableFrom(value.getClass())) {
-            return null;
-        }
-        return (T) value;
-    }
 }

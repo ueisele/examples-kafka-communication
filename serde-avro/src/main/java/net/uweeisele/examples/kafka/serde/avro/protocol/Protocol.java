@@ -5,4 +5,5 @@ public interface Protocol<S, C> {
     S schema();
 
     C content();
+
 }

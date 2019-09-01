@@ -8,10 +8,10 @@ import net.uweeisele.examples.kafka.serde.avro.protocol.avro.schema.SchemaResolv
 import org.apache.avro.Schema;
 import org.apache.avro.io.Decoder;
 
-import java.io.IOException;
 import java.util.Properties;
 
 import static java.util.Objects.requireNonNull;
+import static net.uweeisele.examples.kafka.serde.avro.protocol.ContextSupplierBuilder.contextSupplier;
 
 public class AvroSchemaProtocolDecoder implements ProtocolDecoder<Protocol<Integer, Decoder>, Protocol<Schema, Decoder>> {
 
@@ -31,6 +31,6 @@ public class AvroSchemaProtocolDecoder implements ProtocolDecoder<Protocol<Integ
 
     private Protocol<Schema, Decoder> decode(Integer writerSchemaId, Decoder decoder) {
         Schema writerSchema = schemaResolver.getSchemaById(writerSchemaId);
-        return new ProtocolContainer<>(writerSchema, decoder);
+        return new ProtocolContainer<>(writerSchema, decoder, contextSupplier().with("schema", writerSchema));
     }
 }
