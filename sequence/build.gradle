@@ -27,7 +27,7 @@ dependencies {
     testImplementation libs.kafkaClients_53_test
     testImplementation libs.junit
 
-    testRuntimeOnly libs.slf4jlog4j
+    runtimeOnly libs.slf4jlog4j
 }
 
 javadoc {
