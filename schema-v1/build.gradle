@@ -22,7 +22,7 @@ plugins {
 }
 
 dependencies {
-    implementation libs.avro_19
+    implementation libs.avro
 
     testImplementation libs.junit
 }

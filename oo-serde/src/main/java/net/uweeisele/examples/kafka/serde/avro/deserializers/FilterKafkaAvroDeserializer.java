@@ -50,7 +50,7 @@ public class FilterKafkaAvroDeserializer extends KafkaAvroDeserializer {
     }
 
     @Override
-    protected Object deserialize(boolean includeSchemaAndVersion, String topic, Boolean isKey, byte[] payload, Schema readerSchema) throws SerializationException {
+    protected Object deserialize(String topic, Boolean isKey, byte[] payload, Schema readerSchema) throws SerializationException {
         if (payload == null) {
             return null;
         } else {
@@ -62,7 +62,7 @@ public class FilterKafkaAvroDeserializer extends KafkaAvroDeserializer {
             } else if (!deserializablePredicate.test(writerSchema)) {
                 // throw Unsupported Known Schema Exception (not retryable)
             } else {
-                return super.deserialize(includeSchemaAndVersion, topic, isKey, payload, readerSchema);
+                return super.deserialize(topic, isKey, payload, readerSchema);
             }
         }
         return null;

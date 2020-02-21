@@ -23,9 +23,8 @@ ext {
 }
 
 versions += [
-  confluent_53: "5.3.1",
-  avro_18: "1.8.2",
-  avro_19: "1.9.0",
+  confluent: "5.4.0",
+  avro: "1.9.2",
 
   activation: "1.1.1",
   argparse4j: "0.8.1",
@@ -37,13 +36,13 @@ versions += [
 ]
 
 libs += [
-  kafkaStreams_53: "org.apache.kafka:kafka-streams:${versions.confluent_53}-ccs",
-  kafkaClients_53: "org.apache.kafka:kafka-clients:${versions.confluent_53}-ccs",
-  kafkaClients_53_test: "org.apache.kafka:kafka-clients:${versions.confluent_53}-ccs:test",
-  kafkaAvroSerializer_53: "io.confluent:kafka-avro-serializer:$versions.confluent_53",
-  kafkaStreamsAvroSerde_53: "io.confluent:kafka-streams-avro-serde:$versions.confluent_53",
-  avro_18: "org.apache.avro:avro:$versions.avro_18",
-  avro_19: "org.apache.avro:avro:$versions.avro_19",
+  kafka: "org.apache.kafka:kafka_2.12:${versions.confluent}-ccs",
+  kafkaStreams: "org.apache.kafka:kafka-streams:${versions.confluent}-ccs",
+  kafkaClients: "org.apache.kafka:kafka-clients:${versions.confluent}-ccs",
+  kafkaClients_test: "org.apache.kafka:kafka-clients:${versions.confluent}-ccs:test",
+  kafkaAvroSerializer: "io.confluent:kafka-avro-serializer:$versions.confluent",
+  kafkaStreamsAvroSerde: "io.confluent:kafka-streams-avro-serde:$versions.confluent",
+  avro: "org.apache.avro:avro:$versions.avro",
 
   activation: "javax.activation:activation:$versions.activation",
   argparse4j: "net.sourceforge.argparse4j:argparse4j:$versions.argparse4j",

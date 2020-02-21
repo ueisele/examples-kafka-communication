@@ -18,13 +18,13 @@
  */
 
 dependencies {
-    implementation libs.kafkaClients_53
+    implementation libs.kafkaClients
     implementation libs.argparse4j
     implementation libs.jacksonDatabind
     implementation libs.jacksonJDK8Datatypes
     implementation libs.slf4jApi
 
-    testImplementation libs.kafkaClients_53_test
+    testImplementation libs.kafkaClients_test
     testImplementation libs.junit
 
     runtimeOnly libs.slf4jlog4j

@@ -18,14 +18,14 @@
  */
 
 dependencies {
-    implementation libs.kafkaStreams_53
-    implementation libs.kafkaStreamsAvroSerde_53
-    implementation libs.avro_19
+    implementation libs.kafkaStreams
+    implementation libs.kafkaStreamsAvroSerde
+    implementation libs.avro
 
     implementation libs.argparse4j
     implementation libs.commons_lang
 
-    testImplementation libs.kafkaClients_53_test
+    testImplementation libs.kafkaClients_test
     testImplementation libs.junit
     testImplementation libs.slf4jApi
 

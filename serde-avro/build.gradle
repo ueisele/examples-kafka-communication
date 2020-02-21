@@ -1,6 +1,6 @@
 dependencies {
-    implementation libs.kafkaAvroSerializer_53
-    implementation libs.avro_19
+    implementation libs.kafkaAvroSerializer
+    implementation libs.avro
     implementation libs.commons_lang
 
     testImplementation libs.junit
