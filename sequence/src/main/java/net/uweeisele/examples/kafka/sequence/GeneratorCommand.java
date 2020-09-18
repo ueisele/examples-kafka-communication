@@ -44,6 +44,7 @@ public class GeneratorCommand {
 
         String brokerList = res.getString("brokerList");
         String topic = res.getString("topic");
+        String clientName = res.getString("clientName");
         int acks = res.getInt("acks");
         boolean sync = res.getBoolean("sync");
         Integer numKeys = res.getInt("numKeys");
@@ -60,11 +61,13 @@ public class GeneratorCommand {
         Optional.<Properties>ofNullable(res.get("producer.config")).ifPresent(actualProducerProperties::putAll);
 
         actualProducerProperties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, brokerList);
+        actualProducerProperties.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientName);
         actualProducerProperties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         actualProducerProperties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
         actualProducerProperties.setProperty(ProducerConfig.ACKS_CONFIG, String.valueOf(acks));
 
         Generator.Builder builder = new Generator.Builder(new KafkaProducer<>(actualProducerProperties), topic)
+                .withClientName(clientName)
                 .withMaxMessagesPerKey(maxMessagesPerKey)
                 .withThroughput(new ThroughputThrottler(throughput))
                 .withCreateTime(createTime != null ? Instant.parse(createTime) : null)
@@ -89,6 +92,15 @@ public class GeneratorCommand {
                 .type(String.class)
                 .metavar("TOPIC")
                 .help("Produce messages to this topic.");
+
+        parser.addArgument("--client-name")
+                .action(store())
+                .required(false)
+                .type(String.class)
+                .setDefault("generator")
+                .metavar("CLIENT-NAME")
+                .dest("clientName")
+                .help("Name of the producer.");
 
         parser.addArgument("--broker-list")
                 .action(store())

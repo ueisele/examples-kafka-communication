@@ -23,7 +23,7 @@ ext {
 }
 
 versions += [
-  confluent: "5.4.0",
+  confluent: "5.5.1",
   avro: "1.9.2",
 
   activation: "1.1.1",

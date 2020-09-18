@@ -1,5 +1,7 @@
 package net.uweeisele.examples.kafka.transformer;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 import org.slf4j.Logger;
@@ -10,6 +12,8 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.kafka.streams.StreamsConfig.consumerPrefix;
+import static org.apache.kafka.streams.StreamsConfig.producerPrefix;
 
 public class KafkaStreamsBuilder implements Function<Properties, KafkaStreams>, Supplier<KafkaStreams> {
 
@@ -35,6 +39,8 @@ public class KafkaStreamsBuilder implements Function<Properties, KafkaStreams>, 
 
     public KafkaStreams build(Properties properties) {
         Properties actualProperties = new Properties();
+        actualProperties.put(consumerPrefix(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG), TracingConsumerInterceptor.class.getName());
+        actualProperties.put(producerPrefix(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG), TracingProducerInterceptor.class.getName());
         actualProperties.putAll(propertiesSupplier.get());
         actualProperties.putAll(properties);
         LOG.info(String.format("Building Kafka Streams with properties: %s", actualProperties));

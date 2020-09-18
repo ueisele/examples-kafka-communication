@@ -8,12 +8,17 @@ import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeader;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.singletonList;
 import static java.util.Objects.requireNonNull;
 import static java.util.UUID.randomUUID;
@@ -100,11 +105,12 @@ public class Generator implements Runnable, AutoCloseable {
     public void send(String key, Long value) {
         ProducerRecord<String, String> record;
 
+        Headers headers = new RecordHeaders(List.of(new RecordHeader("producerid", (clientName + "-" + key).getBytes(UTF_8))));
         if (createTime != null) {
-            record = new ProducerRecord<>(topic, null, createTime.toEpochMilli(), key, String.valueOf(value));
+            record = new ProducerRecord<>(topic, null, createTime.toEpochMilli(), key, String.valueOf(value), headers);
             createTime = createTime.plusMillis(System.currentTimeMillis() - start.toEpochMilli());
         } else {
-            record = new ProducerRecord<>(topic, key, String.valueOf(value));
+            record = new ProducerRecord<>(topic, null, key, String.valueOf(value) ,headers);
         }
 
         numSent++;
